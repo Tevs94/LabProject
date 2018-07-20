@@ -11,7 +11,7 @@ class FadingChannel():
         
     def PropogateInput(self, inputToChannel):
         noiseSize = len(inputToChannel)
-        noise = np.random.normal(0, self.noiseDeviation, noiseSize)
+        noise = np.random.normal(0, self.noiseDeviation, noiseSize) + 1j*np.random.normal(0, self.noiseDeviation, noiseSize)
         output = (inputToChannel*self.h)+ noise
         return output
     
