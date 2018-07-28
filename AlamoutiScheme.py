@@ -1,33 +1,39 @@
 from Transmitter import Transmitter
+from FadingChannel import FadingChannel
+from OSTBCEnums import ModulationType
+import matplotlib.pyplot as plot
 
 class AlamoutiScheme():
         #2 Transmitter objects technically unneccessary since they are not modulating/transmitting in parallel
         #But helps for visualization and readability
        
-    def AlamoutiTransmission(self,binInput,modulationScheme):
+    def CreateTransmissions(self,binInput,modulationScheme):
         transmitter1 = Transmitter()
         transmitter2 = Transmitter()
-        symbols = self.transmitter1.BinStreamToSymbols(binInput,modulationScheme)
-        transmittedWave1 = []
-        transmittedWave2 = []
+        symbols = transmitter1.BinStreamToSymbols(binInput,modulationScheme)
+        #2d array of transmissions. 
+        #transmissions [transmitter Number][transmission Number] 
+        transmissions = [[0 for x in range(len(symbols))] for y in range(2)]
+                
+        for x in range(len(symbols)/2):
+            s0 = symbols[2*x]
+            s1 = symbols[2*x + 1]
+                             
+            s1ConjNeg = -s1.conjugate()
+            s0Conj = s0.conjugate()
+            
+            #Transmitter 1
+            transmissions[0][(2*x)] = transmitter1.CreateTransmission(s0)
+            transmissions[0][(2*x)+1] = transmitter1.CreateTransmission(s1ConjNeg)
+
+            
+            #Transmitter 2
+            transmissions[1][(2*x)] = transmitter2.CreateTransmission(s1)
+            transmissions[1][(2*x)+1] = transmitter2.CreateTransmission(s0Conj)
+
+        return transmissions
         
-        for symbol in range(len(symbols)/2):
-            s0 = symbols[2*symbol]
-            s1 = symbols[2*symbol + 1]
-        
-            wave1 = transmitter1.CreateWaveForSymbol(s0)
-            wave2 = transmitter2.CreateWaveForSymbol(s1)
-            
-            #Appends the waveform to the LEFT 
-            transmittedWave1[0:0]=wave1
-            transmittedWave2[0:0]=wave2
-            
-            s1ConjugateNegative = -s1.conjugate()
-            s0Conjugate = s0.conjugate()
-            
-            wave3 = transmitter1.CreateWaveForSymbol(s1ConjugateNegative)
-            wave4 = transmitter2.CreateWaveForSymbol(s0Conjugate)
-            
-            transmittedWave1[0:0]=wave3
-            transmittedWave2[0:0]=wave4
-        
+al = AlamoutiScheme()
+binStream = '10010101'
+t = al.CreateTransmissions(binStream,ModulationType.QPSK)
+s0Wave = t[0][0].wave
