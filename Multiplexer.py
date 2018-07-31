@@ -29,7 +29,7 @@ class Multiplexer():
         inputSignal[1][:] = self.symbol1
         inputSignal[2][:] = self.symbol2
         if(self.type == MultiplexerType.FDM): #Perform Coventional AM, currently set up for 2 by 1 with assumption same carrier is fine
-            for x in range(0, 3): #Nyquit to fc
+            for x in range(0, 3): #Nyquist to fc
                 pilotSignal[x][:] = self.DSB_SC(inputSignal[x][:], 2*self.fc*x)
             outputSignal = np.array(pilotSignal[0]) +  np.array(pilotSignal[1]) + np.array(pilotSignal[2])
         if(self.type == MultiplexerType.OFDM):
