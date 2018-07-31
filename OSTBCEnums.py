@@ -6,5 +6,8 @@ class ModulationType(Enum):
     QAM16 = 3
     QAM64 = 4
     
+class MultiplexerType(Enum):
+    FDM = 1
+    OFDM = 2
 
     

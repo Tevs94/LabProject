@@ -197,29 +197,5 @@ class Transmitter():
         return symbols
     
    
-#Test for Class
-from FadingChannel import FadingChannel
-transmitter = Transmitter()
-fullWave = []
-fullFadedWave = []
-fChannel = FadingChannel(0.01)
-binSequence = '1011'
-symbols = transmitter.BinStreamToSymbols(binSequence,ModulationType.QAM16)
-for symbol in symbols:
-    transmission = transmitter.CreateTransmission(symbol)
-    transmission2 = transmitter.CreateTransmission(symbol)
-    
-    #Old Method, will probably not work with Pilots
-    fadedSymbol = fChannel.PropogateInput(symbol)
-    transmission.UpdateSymbol(fadedSymbol)
-    
-    #New Method
-    fChannel.ApplyFadingToTransmission(transmission2)
-    
-    #Plotting the 2 waves. Each wave can have components 
-    #added manually using its wave property
-    plot.plot(transmission.wave)
-    plot.plot(transmission2.wave)
-    
 
 
