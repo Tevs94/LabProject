@@ -2,6 +2,7 @@ from Transmitter import Transmitter
 from FadingChannel import FadingChannel
 from OSTBCEnums import ModulationType
 import matplotlib.pyplot as plot
+import numpy as np
 
 class AlamoutiScheme():
         #2 Transmitter objects technically unneccessary since they are not modulating/transmitting in parallel
@@ -14,11 +15,10 @@ class AlamoutiScheme():
         #2d array of transmissions. 
         #transmissions [transmitter Number][transmission Number] 
         transmissions = [[0 for x in range(len(symbols))] for y in range(2)]
-                
+        
         for x in range(len(symbols)/2):
             s0 = symbols[2*x]
             s1 = symbols[2*x + 1]
-                             
             s1ConjNeg = -s1.conjugate()
             s0Conj = s0.conjugate()
             
@@ -32,8 +32,3 @@ class AlamoutiScheme():
             transmissions[1][(2*x)+1] = transmitter2.CreateTransmission(s0Conj)
 
         return transmissions
-        
-al = AlamoutiScheme()
-binStream = '10010101'
-t = al.CreateTransmissions(binStream,ModulationType.QPSK)
-s0Wave = t[0][0].wave
