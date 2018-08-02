@@ -1,7 +1,6 @@
 import random
 import numpy as np
 import matplotlib.pyplot as plot
-from Transmission import Transmission
 
 class FadingChannel():
     def __init__(self, noiseDeviation = np.sqrt(0.5)):
@@ -15,4 +14,4 @@ class FadingChannel():
         transmission.MultiplySymbol(self.h)
         transmission.AddSymbol(self.noise)   
     
-
+    
