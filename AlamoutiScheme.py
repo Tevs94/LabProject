@@ -7,10 +7,12 @@ import numpy as np
 class AlamoutiScheme():
         #2 Transmitter objects technically unneccessary since they are not modulating/transmitting in parallel
         #But helps for visualization and readability
-       
+    def __init__(self,transmitPower = 1):
+        self.transmitPower = transmitPower
+        
     def CreateTransmissions(self,binInput,modulationScheme):
-        transmitter1 = Transmitter()
-        transmitter2 = Transmitter()
+        transmitter1 = Transmitter(self.transmitPower)
+        transmitter2 = Transmitter(self.transmitPower)
         symbols = transmitter1.BinStreamToSymbols(binInput,modulationScheme)
         #2d array of transmissions. 
         #transmissions [transmitter Number][transmission Number] 
@@ -19,7 +21,7 @@ class AlamoutiScheme():
         for x in range(len(symbols)/2):
             s0 = symbols[2*x]
             s1 = symbols[2*x + 1]
-            s1ConjNeg = -s1.conjugate()
+            s1ConjNeg = -1*(s1.conjugate())
             s0Conj = s0.conjugate()
             
             #Transmitter 1

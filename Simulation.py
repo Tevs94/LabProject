@@ -4,14 +4,17 @@ from Receiver import Receiver
 from OSTBCEnums import ModulationType
 
 class Simulation():
-    def Run(self, binInput, modulationScheme, noiseDeviation = 0.1):
+    def Run(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1):
         binOutput = ''
-        al = AlamoutiScheme()
+        al = AlamoutiScheme(transmitPower)
         transmissions = al.CreateTransmissions(binInput,modulationScheme)
         rec = Receiver()
         for n in range(len(transmissions[0])/2):
+            print "Transmitted Symbol:"
+            print transmissions[0][2*n].symbol
             ch0 = FadingChannel(noiseDeviation)
             ch1 = FadingChannel(noiseDeviation)
+
             #Timeslot1
             ch0.ApplyFadingToTransmission(transmissions[0][2*n])
             ch1.ApplyFadingToTransmission(transmissions[1][2*n])
@@ -25,14 +28,18 @@ class Simulation():
             h1 = ch1.h
             #Combining
             output = rec.AlamoutiCombine(h0,h1,r0,r1)
+            print "Faded Symbol:"
+            print transmissions[0][2*n].symbol
+            print "Received Symbol:"
+            print output[0]
             #Detection/Demodulation
-            binOutput += rec.MLDSymbolToBinary(output[0], modulationScheme)
-            binOutput += rec.MLDSymbolToBinary(output[1], modulationScheme)
+            binOutput += rec.MLDSymbolToBinary(output[0], modulationScheme,transmitPower)
+            binOutput += rec.MLDSymbolToBinary(output[1], modulationScheme,transmitPower)
         print "Input:"
         print binInput
         print "Output:"
         print binOutput
 
-binInput = '1111010110100000'
+binInput = '10111010'
 sim = Simulation()
-sim.Run(binInput,ModulationType.QPSK)
+sim.Run(binInput,ModulationType.QAM16,0.05,10)
