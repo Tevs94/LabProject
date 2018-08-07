@@ -7,45 +7,48 @@ import Transmitter as Transmitter
 
 class Multiplexer():
      
-    def __init__(self, muxType, symbol1, symbol2, carrierFrequency = GlobalSettings.carrierFrequency ,muxCarrierFrequency = GlobalSettings.multiplexCarrierFrequency, messageFrequency = GlobalSettings.messageFrequency, carrierAmplitude = GlobalSettings.multiplexCarrierAmplitude, sampleTime = GlobalSettings.sampleTime):
-        self.fmux = muxCarrierFrequency
+    def __init__(self, muxType, symbol, transmitter = 0, carrierFrequency = GlobalSettings.carrierFrequency ,muxCarrierFrequency = GlobalSettings.multiplexCarrierFrequency, messageFrequency = GlobalSettings.messageFrequency, carrierAmplitude = GlobalSettings.multiplexCarrierAmplitude, sampleTime = GlobalSettings.sampleTime):
+        self.fmux = muxCarrierFrequency * (transmitter + 1)
         self.fc = carrierFrequency
         self.fm = messageFrequency
         self.ac = carrierAmplitude
         self.ts = sampleTime
         self.type = muxType
-        self.symbol1 = symbol1.wave #Temp till we have signals proceeding then will just set it up to split them here
-        self.symbol2 = symbol2.wave
+        self.symbol = symbol #Temp till we have signals proceeding then will just set it up to split them here
         self.time = np.arange(0,1/self.fm,self.ts)
+        self.transmitter = transmitter
+        self.SerialToParallel()
     
     #Apply mod scheme and pilot
     def SerialToParallel(self):
-        inputSignal = [[]*3 for _ in range(3)]
-        pilotSignal = [[]*3 for _ in range(3)]
-        ifftSignal = [[]*3 for _ in range(3)]
-        cyclicSignal = [[]*3 for _ in range(3)]
-        outputSignal = np.array([[]*1 for _ in range(10000)])
+        inputSignal = [[]*2 for _ in range(2)]
+        pilotSignal = [[]*2 for _ in range(2)]
+        ifftSignal = [[]*2 for _ in range(2)]
+        cyclicSignal = [[]*2 for _ in range(2)]
         inputSignal[0][:] = self.GeneratePilot()
-        inputSignal[1][:] = self.symbol1
-        inputSignal[2][:] = self.symbol2
+        inputSignal[1][:] = self.symbol.wave
         if(self.type == MultiplexerType.FDM): #Perform Coventional AM, currently set up for 2 by 1 with assumption same carrier is fine
-            for x in range(0, 3): #Nyquist to fc
-                pilotSignal[x][:] = self.DSB_SC(inputSignal[x][:], 2*self.fc*x)
-            outputSignal = np.array(pilotSignal[0]) +  np.array(pilotSignal[1]) + np.array(pilotSignal[2])
+            for x in range(0, 2): #Nyquist to fc
+                pilotSignal[x][:] = self.DSB_FC(inputSignal[x][:], 2*self.fc*x)
+            self.ParallelToSerial(pilotSignal)
         if(self.type == MultiplexerType.OFDM):
-            for x in range(0, 3):
+            for x in range(0, 2):
                pilotSignal[x][:] = self.rect_Modulation(inputSignal[x][:], self.fc*x)
                ifftSignal[x][:] = self.IFFT(pilotSignal[x][:])
                cyclicSignal[x][:] = self.CyclicPrefix(ifftSignal[x][:])
-            outputSignal = np.array(cyclicSignal[0]) +  np.array(cyclicSignal[1]) + np.array(cyclicSignal[2])
-        return outputSignal
+            self.ParallelToSerial(cyclicSignal)
+    
+    def ParallelToSerial(self, signal):
+        self.wave = np.array(signal[0]) +  np.array(signal[1])
          
     def GeneratePilot(self):
         outputSignal = np.cos(2 * np.pi * self.fc * self.time)
         return outputSignal
     
-    def DSB_SC(self, signal, shift, factor = 1):
-        preCarrier = np.array([(factor * x)+1 for x in signal])
+    def DSB_FC(self, signal, shift, factor = 1):
+        maxSignal = np.amax(signal)
+        normalizedSignal = np.array([(x/maxSignal) for x in signal])
+        preCarrier = np.array([(factor * x)+1 for x in normalizedSignal])
         carrier = np.array(np.cos(2 * np.pi * (self.fmux + shift) * self.time))
         postCarrierNoAmp = np.multiply(preCarrier,carrier)
         outputSignal = np.multiply(self.ac,postCarrierNoAmp)
@@ -69,19 +72,3 @@ class Multiplexer():
          tail = int(float(middle/2) + (0.5 if float(middle/2) % 2 != 0 else 0))
          outputSignal = np.append(signal,signal[0:tail])
          return outputSignal
-            
-        
-#Test for Class
-from FadingChannel import FadingChannel
-transmitter = Transmitter.Transmitter()
-fullWave = []
-fullFadedWave = []
-fChannel = FadingChannel(0.01)
-binSequence = '1011'
-symbols = transmitter.BinStreamToSymbols(binSequence,ModulationType.QPSK)
-transmission = transmitter.CreateTransmission(symbols[0])
-transmission2 = transmitter.CreateTransmission(symbols[1])
-Mux = Multiplexer(MultiplexerType.FDM,transmission, transmission2)      
-n = Mux.SerialToParallel()
-
-plot.plot(n)
