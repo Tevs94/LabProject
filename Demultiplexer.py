@@ -7,7 +7,6 @@ from scipy.signal import butter, lfilter, freqz, firwin, filtfilt
 import Transmitter as Transmitter
 import Multiplexer as Multiplexer
 
-
 class Demultiplexer():
     def __init__(self, muxType, signal, carrierFrequency = GlobalSettings.carrierFrequency ,muxCarrierFrequency = GlobalSettings.multiplexCarrierFrequency, messageFrequency = GlobalSettings.messageFrequency, carrierAmplitude = GlobalSettings.multiplexCarrierAmplitude, sampleTime = GlobalSettings.sampleTime):
         self.fmux = muxCarrierFrequency
@@ -25,18 +24,10 @@ class Demultiplexer():
         low = lowerLimit/nyq
         high = upperLimit/nyq
         b, a = butter(order, [low, high], btype='band') #b = num a = denom
-        y = lfilter(b, a, signal)
-        plot.plot(y)
+        y = filtfilt(b, a, signal)
         w, h = freqz(b, a, worN=2000)
         #plot.plot((nyq / np.pi) * w, abs(h))
         #plot.xlabel('Frequency (Hz)')
-        return y
-    
-    def FIR(self,ntaps, lowcut, highcut, fs, signal, window='hamming'):
-        nyq = 0.5 * fs
-        taps = firwin(ntaps, [lowcut, highcut], nyq=nyq, pass_zero=False, window=window, scale=False)
-        y = lfilter(taps, 1.0, signal)
-        plot.plot(y)
         return y
         
     def DemodulateDSB_FC(self, signal):
@@ -59,7 +50,7 @@ class Demultiplexer():
         nyq = 0.5 * (1/self.ts)
         Wc = frequency/nyq
         b, a = butter(order, Wc, btype='low') #b = num a = denom
-        y = lfilter(b, a, signal)
+        y = filtfilt(b, a, signal)
         return y
     
     def GeneratePilot(self):
@@ -68,23 +59,33 @@ class Demultiplexer():
     
     def ChannelEstimator(self, pilot, signal):
         maxPilot = np.amax(pilot)
-        #maxSignal = float(np.amax(signal))
-        #difference = np.divide(maxPilot,maxSignal)
-        #ampFixSignal = np.array([x/difference for x in signal])
-        #crossCorrelated = signal.correlate(pilot, ampFixSignal, mode='full')
-        #peak = np.argmax(crossCorrelated)
-        #period = 1/self.fc #in this case for my pilot
-        #length = period/(self.ts)
-        #radAngle = peak/length
-        #angle = radAngle * (2*np.pi)
-        #self.channel = (difference * np.cos(angle)) + (1j * difference * np.sin(angle))
+        maxSignal = float(np.amax(signal))
+        difference = np.divide(maxPilot,maxSignal)
+        ampFixSignal = np.array([x/difference for x in signal])
+        crossCorrelated = np.correlate(pilot, ampFixSignal, mode='full')
+        peak = 10000 - np.argmax(crossCorrelated)
+        print peak
+        period = float(1.0/self.fc) #in this case for my pilot
+        length = period/(self.ts)
+        shift = peak/length
+        angle = int(shift * (2*np.pi))
+        self.channel = (difference * np.cos(angle)) + (1j * difference * np.sin(angle))
+        print self.channel
         
     def SignalDetector(self, signal):
          if(self.type == MultiplexerType.FDM):
-            a = self.BandPassFilter(self.fmux - self.fc,self.fmux + self.fc,signal)
-            #a = self.FIR(124, self.fmux - self.fc,self.fmux + self.fc, 1/self.ts, self.transmittedSignal)
-            pilot = self.DemodulateDSB_FC(a)
-            cleanPilot = self.GeneratePilot
+#             
+#            bandPassedSingal = self.BandPassFilter(self.fmux - self.fc,self.fmux + self.fc,signal)
+#            rollFixedSignal = np.roll(bandPassedSingal,-500)
+#            pilot = self.DemodulateDSB_FC(rollFixedSignal)
+             
+            rollFixedSignal = self.BandPassFilter(self.fmux - self.fc,self.fmux + self.fc,signal)
+            pilot = self.DemodulateDSB_FC(rollFixedSignal)
+            
+            cleanPilot = self.GeneratePilot()
+            plot.figure(13)
+            plot.clf()
+            plot.plot(cleanPilot)
             plot.plot(cleanPilot)
             self.ChannelEstimator(cleanPilot ,pilot)
          else:
