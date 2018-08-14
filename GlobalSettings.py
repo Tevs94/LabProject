@@ -1,4 +1,4 @@
-sampleTime = 0.0001
+sampleTime = 0.00001
 carrierFrequency = 10
 messageFrequency = 1
 multiplexCarrierFrequency = 10 * carrierFrequency

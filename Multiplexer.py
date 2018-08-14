@@ -38,13 +38,13 @@ class Multiplexer():
                cyclicSignal[x][:] = self.CyclicPrefix(ifftSignal[x][:])
             self.ParallelToSerial(cyclicSignal)
     
-#    def ParallelToSerial(self, signal):
-#        tmp = np.array(signal[0]) +  np.array(signal[1])
-#        self.wave = np.roll(tmp,500)
-            
     def ParallelToSerial(self, signal):
-        self.wave = np.array(signal[0]) +  np.array(signal[1])
-        
+        tmp = np.array(signal[0]) +  np.array(signal[1])
+        self.wave = np.roll(tmp,500)
+            
+#    def ParallelToSerial(self, signal):
+#        self.wave = np.array(signal[0]) +  np.array(signal[1])
+#        
     def GeneratePilot(self):
         outputSignal = np.cos(2 * np.pi * self.fc * self.time)
         return outputSignal
