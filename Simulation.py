@@ -3,6 +3,7 @@ from FadingChannel import FadingChannel
 from Receiver import Receiver
 from OSTBCEnums import ModulationType
 import GlobalSettings
+import random
 
 class Simulation():
     def Run(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1):
@@ -29,14 +30,29 @@ class Simulation():
             #Detection/Demodulation
             binOutput += rec.MLDSymbolToBinary(output[0], modulationScheme,transmitPower)
             binOutput += rec.MLDSymbolToBinary(output[1], modulationScheme,transmitPower)
-        print "Input:"
-        print binInput
-        print "Output:"
-        print binOutput
         
+        numErrors = 0
+        for n in range(len(binInput)):
+            if binInput[n] != binOutput[n]:
+                numErrors += 1
+                
+        BER = float(numErrors) /  float(len(binInput))     
+        res = SimulationResults(binOutput, BER)
+        return res
+    
+    def CreateBinaryStream(self, length):
+        random.seed()
+        bs = ''
+        for n in range(length):
+            bs += str(random.randint(0,1))
+        return bs
+    
     def WriteGraphToFile(self, graph, newFileName, fileLocation = GlobalSettings.imageFolderPath):
         print "Creating File"
-        
-#binInput = '10111010'
-#sim = Simulation()
-#sim.Run(binInput,ModulationType.QAM16,0.5,1)
+
+class SimulationResults():
+    #storage class for all the results of the simulation
+    def __init__(self, outputBin, BER):
+        self.output = outputBin
+        self.BER = BER
+

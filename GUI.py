@@ -3,7 +3,7 @@ from PIL import ImageTk, Image
 import tkMessageBox
 import FadingChannel as Channel
 from OSTBCEnums import ModulationType
-from Simulation import Simulation
+from Simulation import Simulation, SimulationResults
 import GlobalSettings
 
 class GUI(tk.Tk):
@@ -70,12 +70,16 @@ class GUI(tk.Tk):
         
         
         #Right Frame
-        dataLabel = tk.Label(rightFrame, text = "Data from the simulation will be displayed here")
-        dataLabel.grid(padx = 30)
+        
+        self.dataLabel = tk.Label(rightFrame, text = "Data from the simulation will be displayed here")
+        self.dataLabel.grid(row = 1,padx = 30)
         
     def RunSimulation(self):
-        #sim = Simulation()
-        print "Running Simulation: "+ self.GetInputData()
+        sim = Simulation()
+        binInput = sim.CreateBinaryStream(100)
+        res = sim.Run(binInput,ModulationType.QPSK,0.001,1)
+        self.dataLabel.config(text = "BER: "+str(res.BER))
+
         
      
     def GetInputData(self):
