@@ -49,7 +49,7 @@ class Receiver():
         nyq = 0.5 * fs
         normal_cutoff = cutOff / nyq
         b, a = butter(order, normal_cutoff, analog=False)
-        filteredWave = signal.filtfilt(b, a, wave)
+        filteredWave = signal.lfilter(b, a, wave)
         return filteredWave
         
     def IQWaveToSymbol(self, wave):
@@ -58,12 +58,13 @@ class Receiver():
         waveTime = np.arange(0, messageTime, GlobalSettings.sampleTime)
         cosWave = np.cos(2*np.pi*GlobalSettings.carrierFrequency*waveTime)
         sinWave = np.sin(2*np.pi*GlobalSettings.carrierFrequency*waveTime)
+        plot.plot(cosWave*wave)
         iWave = self.LPFilterWave(cosWave*wave,GlobalSettings.carrierFrequency)
         qWave = self.LPFilterWave(sinWave*wave,GlobalSettings.carrierFrequency)
         #Assume need to determine the Magnitude of the waves generated here, not so easy with the distortion happening
         #Maybe remove first 2000 points then grab min and max from that
         cutOffWaveI = iWave[2000:8000]
         cutOffWaveQ = qWave[2000:8000]
-        i = 2*sum(cutOffWaveI)/len(cutOffWaveI)
-        q = 2*sum(cutOffWaveQ)/len(cutOffWaveQ)
+        i = sum(cutOffWaveI)/len(cutOffWaveI)
+        q = sum(cutOffWaveQ)/len(cutOffWaveQ)
         return i + 1j*q
