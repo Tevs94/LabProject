@@ -2,7 +2,7 @@ import GlobalSettings
 import numpy as np
 
 class Transmission():
-    def __init__(self, symbol, messageFreq = GlobalSettings.messageFrequency, carrierFreq = GlobalSettings.carrierFrequency):
+    def __init__(self, symbol,messageFreq = GlobalSettings.messageFrequency, carrierFreq = GlobalSettings.carrierFrequency):
         self.fc = carrierFreq
         self.mf = messageFreq
         self.symbol = symbol

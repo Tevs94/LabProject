@@ -19,8 +19,9 @@ class InputRequiresPadding(Exception):
 
 class Transmitter():
      #Constellations: http://weibeld.net/mobcom/psk-qam-modulation.html
-    def __init__(self, carrierFreq = GlobalSettings.carrierFrequency):
+    def __init__(self,  transmitPower = 1,carrierFreq = GlobalSettings.carrierFrequency):
         self.fc = carrierFreq
+        self.transmitPower = transmitPower
         
     def GetBitsPerSymbol(self,modulationScheme):
         if(modulationScheme == ModulationType.BPSK):
@@ -34,14 +35,15 @@ class Transmitter():
         else:
             raise InvalidModulationScheme()
             
-    def GetSymbol(self,inputData,modulationScheme,transmitPower = 0.5):
+    def GetSymbol(self,inputData,modulationScheme):
         #Creates the complex number acting as the symbol for the input
+        
         numBits = len(inputData)
         if(numBits != self.GetBitsPerSymbol(modulationScheme)):
             raise IncorrectBitsToCreateSymbol()    
     
         if(modulationScheme == ModulationType.BPSK):
-            a = np.sqrt(2*transmitPower)
+            a = np.sqrt(2*self.transmitPower)
             if inputData == '1':
                 symbol = a
             elif inputData == '0':
@@ -51,7 +53,7 @@ class Transmitter():
             return symbol
             
         elif(modulationScheme == ModulationType.QPSK):
-            a = np.sqrt(2*transmitPower)
+            a = np.sqrt(2*self.transmitPower)
             mod = ModulationConstellations(a)
             iqDictionary = mod.GetConstellationDictionary(modulationScheme)
             try:
@@ -63,7 +65,7 @@ class Transmitter():
             return symbol
         
         elif(modulationScheme == ModulationType.QAM16):
-            a = np.sqrt(2*transmitPower)
+            a = np.sqrt(2*self.transmitPower)
             mod = ModulationConstellations(a)
             iqDictionary = mod.GetConstellationDictionary(modulationScheme)
             try:
@@ -74,7 +76,7 @@ class Transmitter():
                 raise NonBinaryInput()
             return symbol
         elif(modulationScheme == ModulationType.QAM64):
-            a = np.sqrt(2*transmitPower)
+            a = np.sqrt(2*self.transmitPower)
             mod = ModulationConstellations(a)
             iqDictionary = mod.GetConstellationDictionary(modulationScheme)
             try:
