@@ -10,4 +10,6 @@ class MultiplexerType(Enum):
     FDM = 1
     OFDM = 2
 
-    
+class DecoderType(Enum):
+    ML = 1
+    Sphere = 2   

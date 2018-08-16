@@ -1,12 +1,12 @@
 from AlamoutiScheme import AlamoutiScheme
 from FadingChannel import FadingChannel
 from Receiver import Receiver
-from OSTBCEnums import ModulationType
+from OSTBCEnums import ModulationType, MultiplexerType, DecoderType
 import GlobalSettings
 import random
 
 class Simulation():
-    def Run(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1):
+    def Run(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
         binOutput = ''
         al = AlamoutiScheme(transmitPower)
         transmissions = al.CreateTransmissions(binInput,modulationScheme)
@@ -22,15 +22,22 @@ class Simulation():
             ch0.ApplyFadingToTransmission(transmissions[0][(2*n)+1])
             ch1.ApplyFadingToTransmission(transmissions[1][(2*n)+1])
             r1 = rec.CombineReceivedTransmissions(transmissions[0][(2*n)+1],transmissions[1][(2*n)+1])
+            
             #Channel Estimation
-            h0 = ch0.h
-            h1 = ch1.h
+            if(estimationMethod == None):
+                h0 = ch0.h
+                h1 = ch1.h
+            #else use piloting
+            
             #Combining
             output = rec.AlamoutiCombine(h0,h1,r0,r1)
+            
             #Detection/Demodulation
-            binOutput += rec.MLDSymbolToBinary(output[0], modulationScheme,transmitPower)
-            binOutput += rec.MLDSymbolToBinary(output[1], modulationScheme,transmitPower)
-        
+            if decoderType == DecoderType.ML:
+                binOutput += rec.MLDSymbolToBinary(output[0], modulationScheme,transmitPower)
+                binOutput += rec.MLDSymbolToBinary(output[1], modulationScheme,transmitPower)
+            # else use sphere detection
+            
         numErrors = 0
         for n in range(len(binInput)):
             if binInput[n] != binOutput[n]:

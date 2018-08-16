@@ -2,7 +2,7 @@ import Tkinter as tk
 from PIL import ImageTk, Image
 import tkMessageBox
 import FadingChannel as Channel
-from OSTBCEnums import ModulationType
+from OSTBCEnums import ModulationType, MultiplexerType, DecoderType
 from Simulation import Simulation, SimulationResults
 import GlobalSettings
 
@@ -11,6 +11,21 @@ class GUI(tk.Tk):
         tk.Tk.__init__(self)
         self.resizable(width = False, height = False)
         self.title("OSTBC Simulation")
+        self.enumDictionary = {
+                "BPSK": ModulationType.BPSK,
+                "QPSK": ModulationType.QPSK,
+                "QAM16": ModulationType.QAM16,
+                "QAM64": ModulationType.QAM64,
+                "Assume Ideal": None,
+                "Pilot with FDM": MultiplexerType.FDM,
+                "Pilot with OFDM": MultiplexerType.OFDM,
+                "Maximum Likelyhood": DecoderType.ML,
+                "Sphere": DecoderType.Sphere
+                
+        }
+        
+        
+        
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
         leftFrame = tk.Frame(container)
@@ -34,16 +49,16 @@ class GUI(tk.Tk):
         
         chanEstLabel = tk.Label(optionsFrame, text = "Channel Estimation Method:")
         chanEstLabel.grid(row = 1, column = 0, padx = 5)
-        channelEstTypes = ["Assume Ideal", "Pilot with FDM"]
+        channelEstTypes = ["Assume Ideal", "Pilot with FDM", "Pilot with OFDM"]
         self.channelEstimationMethod = tk.StringVar(self)
         self.channelEstimationMethod.set(channelEstTypes[0])
         channelEstimateBox = tk.OptionMenu(optionsFrame,self.channelEstimationMethod, *channelEstTypes)
         channelEstimateBox.grid(row = 1, column = 1,padx = 5, pady = 2)
         
-        signalPowerLabel = tk.Label(optionsFrame, text = "Signal Power:")
-        signalPowerLabel.grid(row = 2, column = 0, padx = 5)
-        self.signalPowerEntry = tk.Entry(optionsFrame)
-        self.signalPowerEntry.grid(row = 2, column = 1, padx = 5, pady = 2)
+        noiseLabel = tk.Label(optionsFrame, text = "Noise Variance:")
+        noiseLabel.grid(row = 2, column = 0, padx = 5)
+        self.noiseEntry = tk.Entry(optionsFrame)
+        self.noiseEntry.grid(row = 2, column = 1, padx = 5, pady = 2)
         
         decodeLabel = tk.Label(optionsFrame, text = "Decoding Scheme:")
         decodeLabel.grid(row = 3, column = 0, padx = 5)
@@ -75,13 +90,23 @@ class GUI(tk.Tk):
         self.dataLabel.grid(row = 1,padx = 30)
         
     def RunSimulation(self):
+        #Get input data
+        try:
+            modType = self.enumDictionary.get(self.modType.get())
+            pilotType = self.enumDictionary.get(self.channelEstimationMethod.get())
+            decoderType = self.enumDictionary.get(self.decodeMethod.get())
+            noiseDev = float(self.noiseEntry.get())
+        except:
+            print "Alert: Input Error"
+ 
         sim = Simulation()
+        
+        #Temporary input data
         binInput = sim.CreateBinaryStream(100)
-        res = sim.Run(binInput,ModulationType.QPSK,0.001,1)
+        
+        res = sim.Run(binInput,modType,noiseDev,1,pilotType,decoderType)
         self.dataLabel.config(text = "BER: "+str(res.BER))
 
-        
-     
     def GetInputData(self):
         modType = self.modType.get()
         return modType
