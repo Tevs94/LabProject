@@ -2,23 +2,29 @@ import numpy as np
 import matplotlib.pyplot as plot
 from Transmission import Transmission
 from ModulationConstellations import ModulationConstellations
+from scipy.signal import butter, lfilter, freqz
+from scipy import signal
+import GlobalSettings
 
 class Receiver():
        
     def CombineReceivedTransmissions(self, transmission1, transmission2):
         #recievedSymbol ONLY FOR TESTING, MUST ADD SYMBOL DETECTION LOGIC
-        receivedSymbol = transmission1.symbol + transmission2.symbol
-        receivedWave = transmission1.wave + transmission2.wave
+        #receivedSymbol = transmission1.symbol + transmission2.symbol
+
+        receivedWave = (transmission1.wave) + (transmission2.wave)
+        receivedSymbol = self.IQWaveToSymbol(receivedWave)
+
         return receivedSymbol
        
     def AlamoutiCombine(self, h0, h1, r0, r1):
         #r0 and r1 are recieved SYMBOLS
         s0 = h0.conjugate()*r0 + h1*r1.conjugate()
-        s1 = h1.conjugate()*r0 - h0*r1.conjugate()
+        s1 = h1.conjugate()*r0 + ((-1*h0)*r1.conjugate())
         return [s0,s1]
     
-    def MLDSymbolToBinary(self, symbol, ModulationType):
-        mod = ModulationConstellations()
+    def MLDSymbolToBinary(self, symbol, ModulationType,transmitPower):
+        mod = ModulationConstellations(transmitPower)
         symbolDictionary = mod.GetConstellationDictionary(ModulationType)
         minDis = np.inf
         binOutput = ''
@@ -37,4 +43,27 @@ class Receiver():
         symbolDictionary = mod.GetConstellationDictionary(ModulationType)
 
         return '01'
+    
+    def LPFilterWave(self, wave, cutOff, order = 2):
+        #Note there is a bit of distortion at the beginning
+        fs = float(1)/GlobalSettings.sampleTime
+        nyq = 0.5 * fs
+        normal_cutoff = cutOff / nyq
+        b, a = butter(order, normal_cutoff, 'lowpass', analog=False)
+        filteredWave = signal.filtfilt(b, a, wave, method = "gust")
+        return filteredWave
         
+    def IQWaveToSymbol(self, wave):
+        
+        messageTime = float(1)/GlobalSettings.messageFrequency
+        waveTime = np.arange(0, messageTime, GlobalSettings.sampleTime)
+        cosWave = np.cos(2*np.pi*GlobalSettings.carrierFrequency*waveTime)
+        sinWave = np.sin(2*np.pi*GlobalSettings.carrierFrequency*waveTime)
+        iWave = self.LPFilterWave(cosWave*wave,GlobalSettings.carrierFrequency)
+        qWave = self.LPFilterWave(sinWave*wave,GlobalSettings.carrierFrequency)
+        #These are values for I and Q. Taking average value of them for best results
+        cutOffWaveI = iWave[2000:8000]
+        cutOffWaveQ = qWave[2000:8000]
+        i = 2*sum(cutOffWaveI)/len(cutOffWaveI)
+        q = 2*sum(cutOffWaveQ)/len(cutOffWaveQ)
+        return i + 1j*q
