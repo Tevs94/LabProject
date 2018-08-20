@@ -54,16 +54,29 @@ class Receiver():
         return filteredWave
         
     def IQWaveToSymbol(self, wave):
-        
+       
         messageTime = float(1)/GlobalSettings.messageFrequency
         waveTime = np.arange(0, messageTime, GlobalSettings.sampleTime)
+        wavePoints = len(waveTime)
+        pointsDeleted = wavePoints-len(wave)
+        
+        if pointsDeleted>0:
+             #Assumption- if wave is smaller, it has been cut down equally on both sides
+            newStart = pointsDeleted/2
+            newEnd = wavePoints-(pointsDeleted/2)
+            waveTime = waveTime[newStart:newEnd]
+            
         cosWave = np.cos(2*np.pi*GlobalSettings.carrierFrequency*waveTime)
         sinWave = np.sin(2*np.pi*GlobalSettings.carrierFrequency*waveTime)
         iWave = self.LPFilterWave(cosWave*wave,GlobalSettings.carrierFrequency)
         qWave = self.LPFilterWave(sinWave*wave,GlobalSettings.carrierFrequency)
+        
+        #Need to trim the filtered signal on both sides by about 20% for safety
+        trimNumber = int(len(iWave))/5
+        cutOffWaveI = iWave[trimNumber:len(iWave)-trimNumber]
+        cutOffWaveQ = qWave[trimNumber:len(iWave)-trimNumber]
         #These are values for I and Q. Taking average value of them for best results
-        cutOffWaveI = iWave[2000:8000]
-        cutOffWaveQ = qWave[2000:8000]
+  
         i = 2*sum(cutOffWaveI)/len(cutOffWaveI)
         q = 2*sum(cutOffWaveQ)/len(cutOffWaveQ)
         return i + 1j*q
