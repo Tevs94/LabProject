@@ -50,3 +50,6 @@ class Transmission():
     
     def AmplitudeMultiplyWave(self, amplitude):
         self.wave = self.wave * amplitude
+        
+    def OverideWave(self, signal):
+        self.wave = signal
