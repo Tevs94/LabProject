@@ -8,7 +8,7 @@ import Multiplexer as Multiplexer
 import Demultiplexer as Demultiplexer
 
 class Simulation():
-    def Run(self, binInput, modulationScheme, multiplexerType = MultiplexerType.FDM, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
+    def Run(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
         binOutput = ''
         al = AlamoutiScheme(transmitPower)
         transmissions = al.CreateTransmissions(binInput,modulationScheme)
@@ -32,22 +32,22 @@ class Simulation():
                 
             else:
                 #Timeslot1
-                Mux10 = Multiplexer.Multiplexer(multiplexerType,transmissions[0][2*n])
-                Mux11 = Multiplexer.Multiplexer(multiplexerType,transmissions[1][2*n])
+                Mux10 = Multiplexer.Multiplexer(estimationMethod,transmissions[0][2*n])
+                Mux11 = Multiplexer.Multiplexer(estimationMethod,transmissions[1][2*n])
                 transmissions[0][2*n].OverideWave(Mux10.wave)
                 transmissions[1][2*n].OverideWave(Mux11.wave)
                 ch0.ApplyFadingToTransmission(transmissions[0][2*n])
                 ch1.ApplyFadingToTransmission(transmissions[1][2*n])
-                Demux1 = Demultiplexer.Demultiplexer(multiplexerType,transmissions[0][2*n], transmissions[1][2*n])
+                Demux1 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][2*n], transmissions[1][2*n])
                 r0 = rec.CombineReceivedTransmissions(Demux1.s0,Demux1.s1)
                 #Timeslot2
-                Mux20 = Multiplexer.Multiplexer(multiplexerType,transmissions[0][(2*n)+1])
-                Mux21 = Multiplexer.Multiplexer(multiplexerType,transmissions[1][(2*n)+1])
+                Mux20 = Multiplexer.Multiplexer(estimationMethod,transmissions[0][(2*n)+1])
+                Mux21 = Multiplexer.Multiplexer(estimationMethod,transmissions[1][(2*n)+1])
                 transmissions[0][(2*n)+1].OverideWave(Mux20.wave)
                 transmissions[1][(2*n)+1].OverideWave(Mux21.wave)
                 ch0.ApplyFadingToTransmission(transmissions[0][(2*n)+1])
                 ch1.ApplyFadingToTransmission(transmissions[1][(2*n)+1])
-                Demux2 = Demultiplexer.Demultiplexer(multiplexerType,transmissions[0][(2*n)+1], transmissions[1][(2*n)+1])
+                Demux2 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][(2*n)+1], transmissions[1][(2*n)+1])
                 r1 = rec.CombineReceivedTransmissions(Demux2.s0,Demux2.s1)
                 #Channel Estimation
                 h0 = Demux2.h0
