@@ -82,9 +82,6 @@ class Simulation():
             bs += str(random.randint(0,1))
         return bs
     
-    def WriteGraphToFile(self, graph, newFileName, fileLocation = GlobalSettings.imageFolderPath):
-        print "Creating File"
-
 class SimulationResults():
     #storage class for all the results of the simulation
     def __init__(self, outputBin, BER):
