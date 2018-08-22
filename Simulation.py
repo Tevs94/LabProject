@@ -38,7 +38,7 @@ class Simulation():
                 transmissions[1][2*n].OverideWave(Mux11.wave)
                 ch0.ApplyFadingToTransmission(transmissions[0][2*n])
                 ch1.ApplyFadingToTransmission(transmissions[1][2*n])
-                Demux1 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][2*n].wave, transmissions[1][2*n].wave)
+                Demux1 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][2*n].wave, transmissions[1][2*n].wave,n)
                 transmissions[0][2*n].OverideWave(Demux1.s0)
                 transmissions[1][2*n].OverideWave(Demux1.s1)
                 r0 = rec.CombineReceivedTransmissions(transmissions[0][2*n],transmissions[1][2*n])
@@ -49,13 +49,16 @@ class Simulation():
                 transmissions[1][(2*n)+1].OverideWave(Mux21.wave)
                 ch0.ApplyFadingToTransmission(transmissions[0][(2*n)+1])
                 ch1.ApplyFadingToTransmission(transmissions[1][(2*n)+1])
-                Demux2 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][(2*n)+1].wave, transmissions[1][(2*n)+1].wave)
+                Demux2 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][(2*n)+1].wave, transmissions[1][(2*n)+1].wave,n)
                 transmissions[0][(2*n)+1].OverideWave(Demux2.s0)
                 transmissions[1][(2*n)+1].OverideWave(Demux2.s1)
                 r1 = rec.CombineReceivedTransmissions(transmissions[0][(2*n)+1],transmissions[1][(2*n)+1])
                 #Channel Estimation
                 h0 = Demux2.h0
                 h1 = Demux2.h1
+                print "n =",n
+                print "ho: ",h0
+                print "ReaL ho: ",ch0.h
             
             #Combining
             output = rec.AlamoutiCombine(h0,h1,r0,r1)
