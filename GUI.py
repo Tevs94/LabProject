@@ -102,7 +102,7 @@ class GUI(tk.Tk):
         sim = Simulation()
         
         #Temporary input data
-        binInput = sim.CreateBinaryStream(48*100)
+        binInput = sim.CreateBinaryStream(48)
         
         res = sim.Run(binInput,modType,noiseDev,1,pilotType,decoderType)
         self.dataLabel.config(text = "BER: "+str(res.BER))
