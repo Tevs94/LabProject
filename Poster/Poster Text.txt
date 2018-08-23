@@ -1,0 +1,26 @@
+
+What is a 'Fading Channel'?
+
+A Rayleigh Fading Channel is a model for a channel
+where multiple copies of transmissions reflect 
+and refract off the environment before getting 
+to the receiver. Each transmission is independently 
+phase and amplitude shifted by the channel. At the 
+receiver, all the randomly shifted transmissions add
+together, making it difficult to decode.
+
+The channel's coeffecients can be estimated using a
+'Channel Estimator'. The Channel Estimator used in this 
+simulation is built with multiplexed pilot signals.
+
+
+
+The Alamouti Scheme
+
+A transmission scheme proposed by S. M. Alamouti in 1998 
+allows for the original transmitted data to be determined 
+with good accuracy. His original scheme required 2 transmitters
+and 1 receiver, but could be extended to multiple receivers. 
+The scheme involves sending copies of a transmission in 2 time 
+frames, then, using a channel estimator and his combining scheme
+at the receiver, the original transmissions can be determined.

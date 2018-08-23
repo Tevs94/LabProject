@@ -1,7 +1,9 @@
 from OSTBCEnums import ModulationType
+import numpy as np
 class ModulationConstellations():
     def __init__(self, a = 1):
-        
+        #Temporary normalization limits what the constellation power is
+        a = 1
         self.BPSKDictionary = {
                         '0': [-a,0],
                         '1': [a,0]
@@ -101,6 +103,9 @@ class ModulationConstellations():
                        '111110': [3*a,1*a],
                        '111111': [3*a,3*a],
                        }
+        
+        self.NormalizeConstellations()
+        
     def GetConstellationDictionary(self, modulationScheme):
         if(modulationScheme == ModulationType.BPSK):
             return self.BPSKDictionary
@@ -110,4 +115,15 @@ class ModulationConstellations():
             return self.QAM16Dictionary
         elif(modulationScheme == ModulationType.QAM64):
             return self.QAM64Dictionary
-
+    
+    def NormalizeConstellations(self):
+        for constellation in [self.BPSKDictionary , self.QPSKDictionary, self.QAM16Dictionary, self.QAM64Dictionary]:
+            vals = constellation.values()
+            totalPower = 0
+            for point in vals:
+                totalPower += np.sqrt(np.square(point[0])+np.square(point[1]))
+            avgPower = totalPower/len(vals)
+            for kvp in constellation:
+                constellation[kvp][0] = constellation[kvp][0]/avgPower
+                constellation[kvp][1] = constellation[kvp][1]/avgPower             
+      
