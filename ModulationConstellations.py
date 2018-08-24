@@ -15,7 +15,7 @@ class ModulationConstellations():
                         '10': [a,-a],
                         '11': [a,a],
                         }
-         
+         #https://slideplayer.com/slide/7618082/25/images/92/16-QAM+constellation+using+Gray+coding.jpg
         self.QAM16Dictionary = {
                            '0000': [-3*a,3*a],
                            '0001': [-3*a,a],

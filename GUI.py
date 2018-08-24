@@ -58,7 +58,7 @@ class GUI(tk.Tk):
         
         SNRLabel = tk.Label(optionsFrame, text = "SNR(dB):")
         SNRLabel.grid(row = 2, column = 0, padx = 5)
-        SNRValues = [20.0, 10.0, 5.0, 4.0 ,2.0 ,1.0]
+        SNRValues = [30.0, 20.0, 10.0, 5.0, 4.0 ,2.0 ,1.0]
         self.SNR = tk.DoubleVar(self)
         self.SNR.set(SNRValues[0])
         SNRBox = tk.OptionMenu(optionsFrame,self.SNR, *SNRValues)
@@ -107,8 +107,7 @@ class GUI(tk.Tk):
         sim = Simulation()
         
         #Temporary input data
-        binInput = sim.CreateBinaryStream(48)
-        
+        binInput = sim.CreateBinaryStream(4800)
         res = sim.Run(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
         self.dataLabel.config(text = "BER: "+str(res.BER))
 
