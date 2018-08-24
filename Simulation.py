@@ -13,11 +13,13 @@ class Simulation():
         rec = Receiver()
         al = AlamoutiScheme(transmitPower)
         inputStrings = self.SplitInput(binInput)
+        progress = 0.0
+        
         for binString in inputStrings:
-           
-            transmissions = al.CreateTransmissions(binString,modulationScheme)
             
+            transmissions = al.CreateTransmissions(binString,modulationScheme)
             for n in range(len(transmissions[0])/2):
+                
                 ch0 = FadingChannel(noiseDeviation)
                 ch1 = FadingChannel(noiseDeviation)
                 if(estimationMethod == None):
@@ -63,13 +65,17 @@ class Simulation():
                 #Combining
     
                 output = rec.AlamoutiCombine(h0,h1,r0,r1)
+              
                 #Detection/Demodulation
                 if decoderType == DecoderType.ML:
                     binOutput += rec.MLDSymbolToBinary(output[0], modulationScheme,transmitPower)
                     binOutput += rec.MLDSymbolToBinary(output[1], modulationScheme,transmitPower)
                 # else use sphere detection
-                
+
+                progress = float(len(binOutput))/float(len(binInput))
+
         numErrors = 0
+
         for n in range(len(binInput)):
             if binInput[n] != binOutput[n]:
                 numErrors += 1
