@@ -5,7 +5,7 @@ from scipy.signal import butter, filtfilt
 import matplotlib.pyplot as plot
 
 class Demultiplexer():
-    def __init__(self, muxType, signal0, signal1,n , carrierFrequency = GlobalSettings.carrierFrequency ,muxCarrierFrequency = GlobalSettings.multiplexCarrierFrequency, messageFrequency = GlobalSettings.messageFrequency, carrierAmplitude = GlobalSettings.multiplexCarrierAmplitude, sampleTime = GlobalSettings.sampleTime):
+    def __init__(self, muxType, signal0, signal1 , carrierFrequency = GlobalSettings.carrierFrequency ,muxCarrierFrequency = GlobalSettings.multiplexCarrierFrequency, messageFrequency = GlobalSettings.messageFrequency, carrierAmplitude = GlobalSettings.multiplexCarrierAmplitude, sampleTime = GlobalSettings.sampleTime):
         self.fmux = muxCarrierFrequency
         self.fc = carrierFrequency
         self.fm = messageFrequency
@@ -15,9 +15,7 @@ class Demultiplexer():
         self.time = np.arange(0,1/self.fm,self.ts)
         self.roll = int((1.0/self.fc)/4.0*(1.0/self.ts))
         self.quaterPoint = int(len(self.time)/4.0) #used to ensure correct normaliZaTION
-        print "time: ", len(self.time), "quat: ", self.quaterPoint
         #below we handle transmitters
-        plot.figure(n)
         self.s0, self.h0 = self.SignalDetector(signal0)
         self.s1, self.h1 = self.SignalDetector(signal1)
             
@@ -83,7 +81,6 @@ class Demultiplexer():
         period = float(1.0/self.fc) #in this case for my pilot
         length = period/(self.ts)
         shift = peak/length
-        print "Shift(p/l): ", shift, " peak: ", peak, " length: ", length, " Difference: ", difference
         angle = int(shift * (2*np.pi))
         self.channel = (difference * np.cos(angle)) + (1j * difference * np.sin(angle))
         return self.channel
@@ -94,8 +91,6 @@ class Demultiplexer():
             pilot, preAdjustmentP = self.DemodulateDSB_FC(pilotSignal, self.fc, False)
             cleanPilot, preAdjustmentCP = self.GeneratePilot()
             channel = self.ChannelEstimator(preAdjustmentCP ,preAdjustmentP)
-            plot.plot(cleanPilot, color='black')
-            plot.plot(pilot)
             dataSignal = self.BandPassFilter(self.fmux + self.fc,self.fmux + 3 * self.fc,signal)
             data, preAdjustmentD = self.DemodulateDSB_FC(dataSignal, 2 * self.fc, False)
             return data, channel

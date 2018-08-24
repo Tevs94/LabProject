@@ -6,6 +6,7 @@ import GlobalSettings
 import random
 import Multiplexer as Multiplexer
 import Demultiplexer as Demultiplexer
+import FileManager as FileManager
 
 class Simulation():
     def Run(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
@@ -16,7 +17,7 @@ class Simulation():
         for n in range(len(transmissions[0])/2):
             ch0 = FadingChannel(noiseDeviation)
             ch1 = FadingChannel(noiseDeviation)
-
+            print n
             if(estimationMethod == None):
                 #Timeslot1
                 ch0.ApplyFadingToTransmission(transmissions[0][2*n])
@@ -38,7 +39,7 @@ class Simulation():
                 transmissions[1][2*n].OverideWave(Mux11.wave)
                 ch0.ApplyFadingToTransmission(transmissions[0][2*n])
                 ch1.ApplyFadingToTransmission(transmissions[1][2*n])
-                Demux1 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][2*n].wave, transmissions[1][2*n].wave,n)
+                Demux1 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][2*n].wave, transmissions[1][2*n].wave)
                 transmissions[0][2*n].OverideWave(Demux1.s0)
                 transmissions[1][2*n].OverideWave(Demux1.s1)
                 r0 = rec.CombineReceivedTransmissions(transmissions[0][2*n],transmissions[1][2*n])
@@ -49,7 +50,7 @@ class Simulation():
                 transmissions[1][(2*n)+1].OverideWave(Mux21.wave)
                 ch0.ApplyFadingToTransmission(transmissions[0][(2*n)+1])
                 ch1.ApplyFadingToTransmission(transmissions[1][(2*n)+1])
-                Demux2 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][(2*n)+1].wave, transmissions[1][(2*n)+1].wave,n)
+                Demux2 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][(2*n)+1].wave, transmissions[1][(2*n)+1].wave)
                 transmissions[0][(2*n)+1].OverideWave(Demux2.s0)
                 transmissions[1][(2*n)+1].OverideWave(Demux2.s1)
                 r1 = rec.CombineReceivedTransmissions(transmissions[0][(2*n)+1],transmissions[1][(2*n)+1])
@@ -84,6 +85,11 @@ class Simulation():
         for n in range(length):
             bs += str(random.randint(0,1))
         return bs
+    
+    def ImageToBinary(self):
+        rwControl = FileManager.FileManager()
+        rwControl.ReadFile(r"C:\Users\kitty\Documents\GitHub\LabProject\testImage.png")
+        return rwControl.imageBinaryStr
     
     def WriteGraphToFile(self, graph, newFileName, fileLocation = GlobalSettings.imageFolderPath):
         print "Creating File"
