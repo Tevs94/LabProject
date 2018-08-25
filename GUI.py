@@ -107,12 +107,9 @@ class GUI(tk.Tk):
         sim = Simulation()
         
         #Temporary input data
-<<<<<<< HEAD
         #binInput = sim.CreateBinaryStream
         binInput = sim.ImageToBinary()
-=======
-        binInput = sim.CreateBinaryStream(4800)
->>>>>>> RAMOptimizing
+
         
         res = sim.Run(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
         self.dataLabel.config(text = "BER: "+str(res.BER))
@@ -120,6 +117,11 @@ class GUI(tk.Tk):
     def GetInputData(self):
         modType = self.modType.get()
         return modType
+    
+    
+    def on_click(self, event=None):
+        tk.filename = tk.tkFileDialog.askopenfilename(initialdir = "C:\\",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+        print (tk.filename)
     
 GUI = GUI()
 GUI.mainloop()
