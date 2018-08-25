@@ -1,7 +1,9 @@
 from OSTBCEnums import ModulationType
+import numpy as np
 class ModulationConstellations():
     def __init__(self, a = 1):
-        
+        #Temporary normalization limits what the constellation power is
+        a = 1
         self.BPSKDictionary = {
                         '0': [-a,0],
                         '1': [a,0]
@@ -13,23 +15,23 @@ class ModulationConstellations():
                         '10': [a,-a],
                         '11': [a,a],
                         }
-         
+         #https://slideplayer.com/slide/7618082/25/images/92/16-QAM+constellation+using+Gray+coding.jpg
         self.QAM16Dictionary = {
                            '0000': [-3*a,3*a],
-                           '0001': [-3*a,a],
-                           '0010': [-3*a,-3*a],
-                           '0011': [-3*a,-a],
-                           '0100': [-a,3*a],
-                           '0101': [-a,a],
-                           '0110': [-a,-3*a],
-                           '0111': [-a,-a],
-                           '1000': [3*a,3*a],
-                           '1001': [3*a,a],
-                           '1010': [3*a,-3*a],
-                           '1011': [3*a,-a],
-                           '1100': [a,3*a],
-                           '1101': [a,a],
-                           '1110': [a,-3*a],
+                           '0001': [-1*a,3*a],
+                           '0010': [3*a,3*a],
+                           '0011': [1*a,3*a],
+                           '0100': [-3*a,-3*a],
+                           '0101': [-1*a,-3*a],
+                           '0110': [3*a,-3*a],
+                           '0111': [1*a,-3*a],
+                           '1000': [-3*a,a],
+                           '1001': [-1*a,a],
+                           '1010': [3*a,a],
+                           '1011': [1*a,a],
+                           '1100': [-3*a,-1*a],
+                           '1101': [-1*a,-1*a],
+                           '1110': [3*a,-1*a],
                            '1111': [a,-a],
                            }
         self.QAM64Dictionary = {
@@ -101,6 +103,9 @@ class ModulationConstellations():
                        '111110': [3*a,1*a],
                        '111111': [3*a,3*a],
                        }
+        
+        self.NormalizeConstellations()
+        
     def GetConstellationDictionary(self, modulationScheme):
         if(modulationScheme == ModulationType.BPSK):
             return self.BPSKDictionary
@@ -110,4 +115,15 @@ class ModulationConstellations():
             return self.QAM16Dictionary
         elif(modulationScheme == ModulationType.QAM64):
             return self.QAM64Dictionary
-
+    
+    def NormalizeConstellations(self):
+        for constellation in [self.BPSKDictionary , self.QPSKDictionary, self.QAM16Dictionary, self.QAM64Dictionary]:
+            vals = constellation.values()
+            totalPower = 0
+            for point in vals:
+                totalPower += np.sqrt(np.square(point[0])+np.square(point[1]))
+            avgPower = totalPower/len(vals)
+            for kvp in constellation:
+                constellation[kvp][0] = constellation[kvp][0]/avgPower
+                constellation[kvp][1] = constellation[kvp][1]/avgPower             
+      

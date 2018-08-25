@@ -4,6 +4,7 @@ import tkMessageBox
 import FadingChannel as Channel
 from OSTBCEnums import ModulationType, MultiplexerType, DecoderType
 from Simulation import Simulation, SimulationResults
+import numpy as np
 import GlobalSettings
 
 class GUI(tk.Tk):
@@ -55,10 +56,13 @@ class GUI(tk.Tk):
         channelEstimateBox = tk.OptionMenu(optionsFrame,self.channelEstimationMethod, *channelEstTypes)
         channelEstimateBox.grid(row = 1, column = 1,padx = 5, pady = 2)
         
-        noiseLabel = tk.Label(optionsFrame, text = "Noise Variance:")
-        noiseLabel.grid(row = 2, column = 0, padx = 5)
-        self.noiseEntry = tk.Entry(optionsFrame)
-        self.noiseEntry.grid(row = 2, column = 1, padx = 5, pady = 2)
+        SNRLabel = tk.Label(optionsFrame, text = "SNR(dB):")
+        SNRLabel.grid(row = 2, column = 0, padx = 5)
+        SNRValues = [30.0, 20.0, 10.0, 5.0, 4.0 ,2.0 ,1.0]
+        self.SNR = tk.DoubleVar(self)
+        self.SNR.set(SNRValues[0])
+        SNRBox = tk.OptionMenu(optionsFrame,self.SNR, *SNRValues)
+        SNRBox.grid(row = 2, column = 1,padx = 5, pady = 2)
         
         decodeLabel = tk.Label(optionsFrame, text = "Decoding Scheme:")
         decodeLabel.grid(row = 3, column = 0, padx = 5)
@@ -95,17 +99,22 @@ class GUI(tk.Tk):
             modType = self.enumDictionary.get(self.modType.get())
             pilotType = self.enumDictionary.get(self.channelEstimationMethod.get())
             decoderType = self.enumDictionary.get(self.decodeMethod.get())
-            noiseDev = float(self.noiseEntry.get())
+            SNR = self.SNR.get()
+            noiseStandardDeviation = np.sqrt(np.power(10.0, (-1*SNR)))
         except:
             print "Alert: Input Error"
  
         sim = Simulation()
         
         #Temporary input data
+<<<<<<< HEAD
         #binInput = sim.CreateBinaryStream
         binInput = sim.ImageToBinary()
+=======
+        binInput = sim.CreateBinaryStream(4800)
+>>>>>>> RAMOptimizing
         
-        res = sim.Run(binInput,modType,noiseDev,1,pilotType,decoderType)
+        res = sim.Run(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
         self.dataLabel.config(text = "BER: "+str(res.BER))
 
     def GetInputData(self):
