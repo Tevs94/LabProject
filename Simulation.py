@@ -15,6 +15,7 @@ class Simulation():
     
     def Run(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
         binOutput = ''
+        binInput = self.PadBinary(binInput,modulationScheme)
         rec = Receiver()
         al = AlamoutiScheme(transmitPower)
         inputStrings = self.SplitInput(binInput)
@@ -109,7 +110,21 @@ class Simulation():
     
     def WriteGraphToFile(self, graph, newFileName, fileLocation = GlobalSettings.imageFolderPath):
         print "Creating File"
-
+        
+    def PadBinary(self, binInput, ModType):
+        if(ModType == ModulationType.BPSK and len(binInput)%2 != 0):
+            binInput+= '0'
+        elif(ModType == ModulationType.QPSK and len(binInput)%4 != 0):
+            for i in range(len(binInput)%4):
+                binInput+= '0'
+        elif(ModType == ModulationType.QAM16 and len(binInput)%8 != 0):
+            for i in range(len(binInput)%8):
+                binInput+= '0'
+        elif(ModType == ModulationType.QAM64 and len(binInput)%12 != 0):
+            for i in range(len(binInput)%8):
+                binInput+= '0'
+        return binInput
+    
     def SplitInput(self, binInput):
         inputStrings = ['']
         numStrings = 0
