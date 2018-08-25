@@ -7,6 +7,7 @@ import random
 import Multiplexer as Multiplexer
 import Demultiplexer as Demultiplexer
 import FileManager as FileManager
+from os import getcwd
 
 class Simulation():
     def __init__(self):
@@ -18,6 +19,7 @@ class Simulation():
         al = AlamoutiScheme(transmitPower)
         inputStrings = self.SplitInput(binInput)
         progress = 0.0
+        self.progressInt = 0
         
         for binString in inputStrings:
             transmissions = al.CreateTransmissions(binString,modulationScheme)
@@ -75,6 +77,7 @@ class Simulation():
                 # else use sphere detection
 
                 progress = float(len(binOutput))/float(len(binInput))
+                #.progressInt = int(progress)
                 print progress
 
         numErrors = 0
@@ -96,8 +99,8 @@ class Simulation():
             bs += str(random.randint(0,1))
         return bs
     
-    def ImageToBinary(self):
-        self.rwControl.ReadFile(r"C:\Users\kitty\Documents\GitHub\LabProject\testImage.png")
+    def ImageToBinary(self, path = getcwd() + '\AppData' + '\\' + 'PH_image.png'):
+        self.rwControl.ReadFile(path)
         return self.rwControl.imageBinaryStr
     
     def BinaryToImage(self, binString):

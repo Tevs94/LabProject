@@ -15,7 +15,10 @@ class FileManager():
     def ReadFile(self, location, pad = False):
         #NOTE!!!!!!!!!!!! Uses raw strings that mean start r
         if(location.endswith(('.jpeg', '.jpg', '.png'))):
-            pathElements = location.split('\\')
+            if '/' not in location: 
+                pathElements = location.split('\\')
+            else:
+                pathElements = location.split('/')
             self.imageType = pathElements[-1][-3:]
             self.imageName = pathElements[-1]
             image = open(location, 'rb')
