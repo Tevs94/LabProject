@@ -97,9 +97,9 @@ class FileManager():
 
         
         
-test = FileManager()
-test.ReadFile(r"C:\Users\kitty\Documents\GitHub\LabProject\testImage.png", True)
-imageData = test.BinStrToPBytes(test.imageBinaryStr, True)
-print imageData == test.imageBinaryBytes
-#print test.imageBinaryBytes
-test.WriteFile(test.imageBinaryBytes)
+#test = FileManager()
+#test.ReadFile(r"C:\Users\kitty\Documents\GitHub\LabProject\testImage.png", True)
+#imageData = test.BinStrToPBytes(test.imageBinaryStr, True)
+#print imageData == test.imageBinaryBytes
+##print test.imageBinaryBytes
+#test.WriteFile(imageData)

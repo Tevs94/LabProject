@@ -9,6 +9,9 @@ import Demultiplexer as Demultiplexer
 import FileManager as FileManager
 
 class Simulation():
+    def __init__(self):
+        self.rwControl = FileManager.FileManager()
+    
     def Run(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
         binOutput = ''
         al = AlamoutiScheme(transmitPower)
@@ -17,7 +20,6 @@ class Simulation():
         for n in range(len(transmissions[0])/2):
             ch0 = FadingChannel(noiseDeviation)
             ch1 = FadingChannel(noiseDeviation)
-            print n
             if(estimationMethod == None):
                 #Timeslot1
                 ch0.ApplyFadingToTransmission(transmissions[0][2*n])
@@ -75,6 +77,8 @@ class Simulation():
             if binInput[n] != binOutput[n]:
                 numErrors += 1
                 
+        self.BinaryToImage(binOutput)
+                
         BER = float(numErrors) /  float(len(binInput))     
         res = SimulationResults(binOutput, BER)
         return res
@@ -87,9 +91,12 @@ class Simulation():
         return bs
     
     def ImageToBinary(self):
-        rwControl = FileManager.FileManager()
-        rwControl.ReadFile(r"C:\Users\kitty\Documents\GitHub\LabProject\testImage.png")
-        return rwControl.imageBinaryStr
+        self.rwControl.ReadFile(r"C:\Users\kitty\Documents\GitHub\LabProject\testImage.png")
+        return self.rwControl.imageBinaryStr
+    
+    def BinaryToImage(self, binString):
+        imageData = self.rwControl.BinStrToPBytes(self.rwControl.imageBinaryStr)
+        self.rwControl.WriteFile(imageData)
     
     def WriteGraphToFile(self, graph, newFileName, fileLocation = GlobalSettings.imageFolderPath):
         print "Creating File"
