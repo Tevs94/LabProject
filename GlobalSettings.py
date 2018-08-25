@@ -7,5 +7,5 @@ multiplexCarrierAmplitude = 1 #Am modulation can break if carrier amplitude is s
 imageFolderPath = "images/"
 #maximum bits that should be sent to the transmission creator function to reduce risk of RAM problems
 #To work with all constellations, needs to be divisible by 8 and 12
-maxBitsPerTransmission = 96
+maxBitsPerTransmission = 48
 
