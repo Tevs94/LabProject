@@ -106,6 +106,7 @@ class ModulationConstellations():
         
         self.NormalizeConstellations()
         
+        
     def GetConstellationDictionary(self, modulationScheme):
         if(modulationScheme == ModulationType.BPSK):
             return self.BPSKDictionary

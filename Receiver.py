@@ -9,21 +9,38 @@ import GlobalSettings
 class Receiver():
        
     def CombineReceivedTransmissions(self, transmission1, transmission2):
-        #recievedSymbol ONLY FOR TESTING, MUST ADD SYMBOL DETECTION LOGIC
-        #receivedSymbol = transmission1.symbol + transmission2.symbol     
+        #recievedSymbol ONLY FOR TESTING
+        #receivedSymbol = (transmission1.symbol) + (transmission2.symbol)  
         receivedWave = (transmission1.wave) + (transmission2.wave)
         receivedSymbol = self.IQWaveToSymbol(receivedWave)
         return receivedSymbol
        
-    def AlamoutiCombine(self, h0, h1, r0, r1):
+    def AlamoutiCombine2by1(self, h0, h1, r0, r1):
         #r0 and r1 are recieved SYMBOLS
-        s0 = h0.conjugate()*r0 + h1*r1.conjugate()
+        magH0 = abs(h0)
+        magH1 = abs(h1)
+        s0 = (h0.conjugate()*r0) + (h1*r1.conjugate())
         s1 = h1.conjugate()*r0 + ((-1*h0)*r1.conjugate())
+        s0 = s0/(magH0**2 + magH1**2)
+        s1 = s1/(magH0**2 + magH1**2)
+        return [s0,s1]
+    
+    def AlamoutiCombine2by2(self, h, r):
+        #h and r have 4 values each
+        magH0 = abs(h[0])
+        magH1 = abs(h[1])
+        magH2 = abs(h[2])
+        magH3 = abs(h[3])
+        s0 = (h[0].conjugate()*r[0]) + (h[1]*r[1].conjugate())+(h[2].conjugate()*r[2]) + (h[3]*r[3].conjugate())
+        s1 = (h[1].conjugate()*r[0]) + ((-1*h[0])*r[1].conjugate()) + h[3].conjugate()*r[2] + ((-1*h[2])*r[3].conjugate())
+        s0 = s0/(magH0**2 + magH1**2 + magH2**2 + magH3**2)
+        s1 = s1/(magH0**2 + magH1**2 + magH2**2 + magH3**2)
         return [s0,s1]
     
     def MLDSymbolToBinary(self, symbol, ModulationType,transmitPower):
         mod = ModulationConstellations(transmitPower)
         symbolDictionary = mod.GetConstellationDictionary(ModulationType)
+
         minDis = np.inf
         binOutput = ''
         #Use the dictionary keys and values to get most likely binary value

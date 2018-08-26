@@ -60,7 +60,7 @@ class GUI(tk.Tk):
         
         SNRLabel = tk.Label(optionsFrame, text = "SNR(dB):")
         SNRLabel.grid(row = 2, column = 0, padx = 5)
-        SNRValues = [30.0, 20.0, 10.0, 5.0, 4.0 ,2.0 ,1.0]
+        SNRValues = [30.0, 20.0, 10.0, 5.0, 4.0, 3.0,2.0 ,1.0]
         self.SNR = tk.DoubleVar(self)
         self.SNR.set(SNRValues[0])
         SNRBox = tk.OptionMenu(optionsFrame,self.SNR, *SNRValues)
@@ -74,6 +74,13 @@ class GUI(tk.Tk):
         decodeBox = tk.OptionMenu(optionsFrame,self.decodeMethod, *decodeTypes)
         decodeBox.grid(row = 3, column = 1,padx = 5, pady = 2)
         
+        RecNumLabel = tk.Label(optionsFrame, text = "Number of Receiver Antennae:")
+        RecNumLabel.grid(row = 4, column = 0, padx = 5)
+        RecNumValues = [1,2]
+        self.RecNum = tk.IntVar(self)
+        self.RecNum.set(RecNumValues[0])
+        RecNumBox = tk.OptionMenu(optionsFrame,self.RecNum, *RecNumValues)
+        RecNumBox.grid(row = 4, column = 1,padx = 5, pady = 2)
         #End of options
         
         #Display input Image
@@ -121,17 +128,22 @@ class GUI(tk.Tk):
             decoderType = self.enumDictionary.get(self.decodeMethod.get())
             SNR = self.SNR.get()
             noiseStandardDeviation = np.sqrt(np.power(10.0, (-1*SNR)))
+            numReceivers = self.RecNum.get()
         except:
             print "Alert: Input Error"
  
         sim = Simulation()
         
         #Temporary input data
-        #binInput = sim.CreateBinaryStream
-        binInput = sim.ImageToBinary(self.path)
 
-        
-        res = sim.Run(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
+        binInput = sim.CreateBinaryStream(4800)
+      ` binInput = sim.ImageToBinary(self.path)
+    
+        if numReceivers == 1:
+            res = sim.Run2by1(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
+        elif numReceivers == 2:
+            res = sim.Run2by2(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)     
+
         self.dataLabel.config(text = "BER: "+str(res.BER))
         self.OutputImage(sim)
         
