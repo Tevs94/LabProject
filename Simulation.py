@@ -27,7 +27,7 @@ class Simulation():
         
         for binString in inputStrings:
             transmissions = al.CreateTransmissions(binString,modulationScheme)
-            transmissionEx = deepcopy(transmissions[0][0]).wave    
+              
             for n in range(len(transmissions[0])/2):
                 
                 ch0 = FadingChannel(noiseDeviation)
@@ -36,6 +36,7 @@ class Simulation():
                 hData.append(abs(ch0.h))
                 
                 if(estimationMethod == None):
+                    transmissionEx = deepcopy(transmissions[0][0]).wave  
                     #Timeslot1
                     ch0.ApplyFadingToTransmission(transmissions[0][2*n])
                     ch1.ApplyFadingToTransmission(transmissions[1][2*n])

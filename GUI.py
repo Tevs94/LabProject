@@ -165,7 +165,7 @@ class GUI(tk.Tk):
             res = sim.Run2by2(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)     
 
         self.OutputData(res)
-        self.OutputImage(sim, False)
+        self.OutputImage(sim, True)
        
 
     def GetInputData(self):
