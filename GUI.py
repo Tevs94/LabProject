@@ -9,6 +9,8 @@ import GlobalSettings
 from os import getcwd
 import tkFileDialog 
 import ttk
+import threading
+import time
 
 class GUI(tk.Tk):
     def __init__(self):
@@ -111,7 +113,7 @@ class GUI(tk.Tk):
 
         
         #Simulate Button
-        simulateButton = tk.Button(leftFrame, text = "Simulate",command = lambda:self.RunSimulation())
+        simulateButton = tk.Button(leftFrame, text = "Simulate",command = lambda:self.Start())
         simulateButton.grid(row = 5,column = 0)
         
         
@@ -132,20 +134,19 @@ class GUI(tk.Tk):
         except:
             print "Alert: Input Error"
  
-        sim = Simulation()
-        
+        self.sim = Simulation()
         #Temporary input data
 
-        binInput = sim.CreateBinaryStream(4800)
-        binInput = sim.ImageToBinary(self.path)
+        binInput = self.sim.CreateBinaryStream(4800)
+        binInput = self.sim.ImageToBinary(self.path)
     
         if numReceivers == 1:
-            res = sim.Run2by1(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
+            res = self.sim.Run2by1(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
         elif numReceivers == 2:
-            res = sim.Run2by2(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)     
+            res = self.sim.Run2by2(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)     
 
         self.dataLabel.config(text = "BER: "+str(res.BER))
-        self.OutputImage(sim, False)
+        self.OutputImage(self.sim, False)
         
 
     def GetInputData(self):
@@ -182,6 +183,23 @@ class GUI(tk.Tk):
             self.picLabel2.configure(image=photo2)
             self.picLabel2.image = photo2
         sim.rwControl.ClearGlobals()
+        
+    def UpdateMeter(self):
+        while(self.sim.progressInt < 1001):
+            self.progress["value"] = self.sim.progressInt
+            if(self.sim.progressInt == 1000):
+                break
+            time.sleep(0.1)
+        
+        
+    def Refresh(self):
+        self.update()
+        self.after(1000,self.Refresh)
+
+    def Start(self):
+        self.Refresh()
+        threading.Thread(target=self.RunSimulation).start()
+        threading.Thread(target=self.UpdateMeter).start()
         
     
 GUI = GUI()

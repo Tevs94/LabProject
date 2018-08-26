@@ -13,6 +13,7 @@ from copy import deepcopy
 class Simulation():
     def __init__(self):
         self.rwControl = FileManager.FileManager()
+        self.progressInt = 0
     
     def Run2by1(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
         binOutput = ''
@@ -84,8 +85,7 @@ class Simulation():
                 # else use sphere detection
 
                 progress = float(len(binOutput))/float(len(binInput))
-                print progress
-                #.progressInt = int(progress)
+                self.progressInt = int(progress * 1000)
                
 
         numErrors = 0
