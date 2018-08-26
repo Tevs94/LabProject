@@ -97,7 +97,7 @@ class GUI(tk.Tk):
         self.progress.pack()
         self.progress["value"] = 0
         self.progress["maximum"] = 1000
-        #https://stackoverflow.com/questions/42422139/how-to-easily-avoid-tkinter-freezing
+        
 
         
         #Simulate Button
@@ -165,8 +165,8 @@ class GUI(tk.Tk):
             res = sim.Run2by2(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)     
 
         self.OutputData(res)
-        self.OutputImage(sim)
-        
+        self.OutputImage(sim, False)
+       
 
     def GetInputData(self):
         modType = self.modType.get()
@@ -174,25 +174,34 @@ class GUI(tk.Tk):
     
     def OnClick(self, event=None):
         tk.filename = ""
-        tk.filename = tkFileDialog.askopenfilename(initialdir = r'C:\Users\kitty\Documents\GitHub\LabProject\Upload Image Folder',title = "Select file",filetypes = (("jpeg files","*.jpg"),("jpeg files","*.jpeg"),("png files","*.png")))
+        tk.filename = tkFileDialog.askopenfilename(initialdir = getcwd() + '\Upload Image Folder',title = "Select file",filetypes = [("png files","*.png")])
         if(tk.filename != ""):
+            self.path = tk.filename
             img = ImageTk.PhotoImage(self.OpenImage(tk.filename))
             self.picLabel.configure(image=img)
             self.picLabel.image = img
         
     def OpenImage(self, path):
-        self.path = path
         self.original = Image.open(path, 'r')
         width = 300
         perWidth = (width/float(self.original.size[0]))
         heightRatio = int((float(self.original.size[1])*float(perWidth)))
         resizedImage = self.original.resize((width, heightRatio),Image.ANTIALIAS)
         return resizedImage
-    
-    def OutputImage(self, sim):
-        img = ImageTk.PhotoImage(self.OpenImage(getcwd() + '\Images' + '\\' + sim.rwControl.imageName))
-        self.picLabel2.configure(image=img)
-        self.picLabel2.image = img
+
+    def OutputImage(self, sim, show = False):
+        try:
+            img = ImageTk.PhotoImage(self.OpenImage(getcwd() + '\Images' + '\\' + sim.rwControl.imageName))
+            if(show == True):
+                self.original.show()
+            self.picLabel2.configure(image=img)
+            self.picLabel2.image = img
+        except: 
+            img2 = self.OpenImage(getcwd() + '\AppData' + '\\' + 'PH_image3.png')
+            photo2 = ImageTk.PhotoImage(img2)
+            self.picLabel2.configure(image=photo2)
+            self.picLabel2.image = photo2
+        sim.rwControl.ClearGlobals()
      
     def OutputData(self, simRes):
         self.resultsHeadingLabel.config(text = "Simulation Completed!")
@@ -214,6 +223,7 @@ class GUI(tk.Tk):
         dataPlot = FigureCanvasTkAgg(fig, master=graphWindow)
         dataPlot.show()
         dataPlot.get_tk_widget().pack()
+
     
 GUI = GUI()
 GUI.mainloop()

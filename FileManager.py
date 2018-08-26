@@ -1,5 +1,7 @@
 from os import getcwd 
 import binascii
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class InvalidType(Exception):
     pass
@@ -9,10 +11,19 @@ class FileManager():
         self.imageName = ''
         self.imageBinaryBytes = ''
         self.imageBinaryStr = ''
+        self.preservedHeaderBytes = ''
         self.imageType = ''
         self.currentDirectory = getcwd()
         
-    def ReadFile(self, location, pad = False):
+    def ClearGlobals(self):
+        self.imageName = ''
+        self.imageBinaryBytes = ''
+        self.imageBinaryStr = ''
+        self.preservedHeaderBytes = ''
+        self.imageType = ''
+        self.byteLength = [0]
+        
+    def ReadFile(self, location, pad = False, preserve = False):
         #NOTE!!!!!!!!!!!! Uses raw strings that mean start r
         if(location.endswith(('.jpeg', '.jpg', '.png'))):
             if '/' not in location: 
@@ -21,29 +32,40 @@ class FileManager():
                 pathElements = location.split('/')
             self.imageType = pathElements[-1][-3:]
             self.imageName = pathElements[-1]
-            image = open(location, 'rb')
-            self.imageBinaryBytes = image.read()
-            self.PBytesToBinStr(self.imageBinaryBytes, pad)
-            image.close()
-            
         elif(location.endswith('"\"')):
             pathElements = location.split('"\"')
             if(pathElements[-2].endswith(('.jpeg', '.jpg', '.png'))):
                 self.imageType = pathElements[-2][-3:]
                 self.imageName = pathElements[-2]
-                image = open(location, 'rb')
-                self.imageBinaryBytes = image.read()
-                self.PBytesToBinStr(self.imageBinaryBytes, pad)
-                image.close()
             else:
                 raise InvalidType()
         else:
             raise InvalidType()
+        image = open(location, "rb")
+        self.imageBinaryBytes = image.read()
+        if(preserve == True):
+            self.PreserveHeader()
+        self.PBytesToBinStr(self.imageBinaryBytes, pad)
+        image.close()
+            
         
-    def WriteFile(self, binaryStream):
+    def PreserveHeader(self):
+        if(self.imageType == 'jpg' or self.imageType == 'jpeg'):
+            self.preservedHeaderBytes = self.imageBinaryBytes[0:6]
+            self.imageBinaryBytes = self.imageBinaryBytes[6:]
+        else:
+            self.preservedHeaderBytes = self.imageBinaryBytes[0:26] #png
+            self.imageBinaryBytes = self.imageBinaryBytes[26:]
+        
+    def WriteFile(self, binaryStream, preserve = False):
+        if(preserve == True):
+            binaryStream = self.preservedHeaderBytes + binaryStream
         image = open(self.currentDirectory + '\Images' + '\\' + self.imageName, 'wb')
         image.write(binaryStream)
         image.close()
+#        b = bytearray(binaryStream)
+#        img = Image.open(io.BytesIO(b))
+#        img.save(self.currentDirectory + '\Images' + '\\' + self.imageName)
 
     def PBytesToBinStr(self, PBytes, pad = False):
         self.byteLength = [0] * len(PBytes)
@@ -95,14 +117,12 @@ class FileManager():
                 index+=8
                 reInt = int(binByteData, 2)
                 binBytes = binascii.unhexlify(self.IntToHex(reInt))
+#                if(n > 500):
+#                    binBytes = binascii.unhexlify(self.IntToHex(255))
                 byteList += binBytes
             return byteList
 
-        
-        
 #test = FileManager()
-#test.ReadFile(r"C:\Users\kitty\Documents\GitHub\LabProject\testImage.png", True)
+#test.ReadFile(getcwd() + '\Upload Image Folder' + '\\' + 'testImage2.png' , True, True)
 #imageData = test.BinStrToPBytes(test.imageBinaryStr, True)
-#print imageData == test.imageBinaryBytes
-##print test.imageBinaryBytes
-#test.WriteFile(imageData)
+#test.WriteFile(imageData, True)
