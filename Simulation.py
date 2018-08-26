@@ -15,7 +15,6 @@ class Simulation():
         self.rwControl = FileManager.FileManager()
     
     def Run2by1(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
-
         binOutput = ''
         binInput = self.PadBinary(binInput,modulationScheme)
         rec = Receiver()
@@ -85,6 +84,7 @@ class Simulation():
                 # else use sphere detection
 
                 progress = float(len(binOutput))/float(len(binInput))
+                print progress
                 #.progressInt = int(progress)
                
 
@@ -229,12 +229,12 @@ class Simulation():
         return bs
     
     def ImageToBinary(self, path = getcwd() + '\AppData' + '\\' + 'PH_image.png'):
-        self.rwControl.ReadFile(path)
+        self.rwControl.ReadFile(path, True, True)
         return self.rwControl.imageBinaryStr
     
     def BinaryToImage(self, binString):
-        imageData = self.rwControl.BinStrToPBytes(binString)
-        self.rwControl.WriteFile(imageData)
+        imageData = self.rwControl.BinStrToPBytes(binString, True)
+        self.rwControl.WriteFile(imageData, True)
            
     def PadBinary(self, binInput, ModType):
 
