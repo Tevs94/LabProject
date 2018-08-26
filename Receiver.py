@@ -10,11 +10,9 @@ class Receiver():
        
     def CombineReceivedTransmissions(self, transmission1, transmission2):
         #recievedSymbol ONLY FOR TESTING, MUST ADD SYMBOL DETECTION LOGIC
-        #receivedSymbol = transmission1.symbol + transmission2.symbol
-
+        #receivedSymbol = transmission1.symbol + transmission2.symbol     
         receivedWave = (transmission1.wave) + (transmission2.wave)
         receivedSymbol = self.IQWaveToSymbol(receivedWave)
-
         return receivedSymbol
        
     def AlamoutiCombine(self, h0, h1, r0, r1):

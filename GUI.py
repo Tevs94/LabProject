@@ -6,6 +6,9 @@ from OSTBCEnums import ModulationType, MultiplexerType, DecoderType
 from Simulation import Simulation, SimulationResults
 import numpy as np
 import GlobalSettings
+from os import getcwd
+import tkFileDialog 
+import ttk
 
 class GUI(tk.Tk):
     def __init__(self):
@@ -34,7 +37,6 @@ class GUI(tk.Tk):
         rightFrame = tk.Frame(container)
         rightFrame.grid(row = 0, column = 1)
         
-        
         #Left Frame
         optionsFrame = tk.Frame(leftFrame)
         optionsFrame.grid(row = 1, column = 0, padx = 10, pady = 20)
@@ -58,7 +60,7 @@ class GUI(tk.Tk):
         
         SNRLabel = tk.Label(optionsFrame, text = "SNR(dB):")
         SNRLabel.grid(row = 2, column = 0, padx = 5)
-        SNRValues = [20.0, 10.0, 5.0, 4.0 ,2.0 ,1.0]
+        SNRValues = [30.0, 20.0, 10.0, 5.0, 4.0 ,2.0 ,1.0]
         self.SNR = tk.DoubleVar(self)
         self.SNR.set(SNRValues[0])
         SNRBox = tk.OptionMenu(optionsFrame,self.SNR, *SNRValues)
@@ -76,22 +78,40 @@ class GUI(tk.Tk):
         
         #Display input Image
         origImageLabel = tk.Label(leftFrame, text = "Original Image :")
-        origImageLabel.grid(row = 2, column = 0)
-        image = Image.open("testImage2.png")
-        photo = ImageTk.PhotoImage(image)
-        picLabel = tk.Label(master = leftFrame, image = photo)
-        picLabel.image = photo # keep a reference!
-        picLabel.grid(row = 3,column = 0, padx = 10, pady = 10)
+        origImageLabel.grid(row = 3, column = 0)
+        img = self.OpenImage(getcwd() + '\AppData' + '\\' + 'PH_image.png')
+        photo = ImageTk.PhotoImage(img)
+        self.picLabel = tk.Label(master = leftFrame, image = photo)
+        self.picLabel.image = photo # keep a reference!
+        self.picLabel.grid(row = 4,column = 0, padx = 10, pady = 10)
+        self.picLabel.bind('<Button-1>', self.OnClick)
+        
+        #Display output Image
+        recImageLabel = tk.Label(rightFrame, text = "Received Image :")
+        recImageLabel.grid(row = 3, column = 0)
+        img2 = self.OpenImage(getcwd() + '\AppData' + '\\' + 'PH_image2.png')
+        photo2 = ImageTk.PhotoImage(img2)
+        self.picLabel2 = tk.Label(master = rightFrame, image = photo2)
+        self.picLabel2.image = photo2 # keep a reference!
+        self.picLabel2.grid(row = 4,column = 0, padx = 10, pady = 10)
+        
+        #Progress Bar
+        self.progress = ttk.Progressbar(self, orient="horizontal", length=200, mode="determinate")
+        self.progress.pack()
+        self.progress["value"] = 0
+        self.progress["maximum"] = 1000
+        #https://stackoverflow.com/questions/42422139/how-to-easily-avoid-tkinter-freezing
 
-               
+        
+        #Simulate Button
         simulateButton = tk.Button(leftFrame, text = "Simulate",command = lambda:self.RunSimulation())
-        simulateButton.grid(row = 4,column = 0)
+        simulateButton.grid(row = 5,column = 0)
         
         
         #Right Frame
         
         self.dataLabel = tk.Label(rightFrame, text = "Data from the simulation will be displayed here")
-        self.dataLabel.grid(row = 1,padx = 30)
+        self.dataLabel.grid(row = 1,padx = 0)
         
     def RunSimulation(self):
         #Get input data
@@ -107,14 +127,42 @@ class GUI(tk.Tk):
         sim = Simulation()
         
         #Temporary input data
-        binInput = sim.CreateBinaryStream(48)
+        #binInput = sim.CreateBinaryStream
+        binInput = sim.ImageToBinary(self.path)
+
         
         res = sim.Run(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
         self.dataLabel.config(text = "BER: "+str(res.BER))
+        self.OutputImage(sim)
+        
 
     def GetInputData(self):
         modType = self.modType.get()
         return modType
+    
+    def OnClick(self, event=None):
+        tk.filename = ""
+        tk.filename = tkFileDialog.askopenfilename(initialdir = r'C:\Users\kitty\Documents\GitHub\LabProject\Upload Image Folder',title = "Select file",filetypes = (("jpeg files","*.jpg"),("jpeg files","*.jpeg"),("png files","*.png")))
+        if(tk.filename != ""):
+            img = ImageTk.PhotoImage(self.OpenImage(tk.filename))
+            self.picLabel.configure(image=img)
+            self.picLabel.image = img
+        
+    def OpenImage(self, path):
+        self.path = path
+        self.original = Image.open(path, 'r')
+        width = 300
+        perWidth = (width/float(self.original.size[0]))
+        heightRatio = int((float(self.original.size[1])*float(perWidth)))
+        resizedImage = self.original.resize((width, heightRatio),Image.ANTIALIAS)
+        return resizedImage
+    
+    def OutputImage(self, sim):
+        img = ImageTk.PhotoImage(self.OpenImage(getcwd() + '\Images' + '\\' + sim.rwControl.imageName))
+        self.picLabel2.configure(image=img)
+        self.picLabel2.image = img
+        
+        
     
 GUI = GUI()
 GUI.mainloop()
