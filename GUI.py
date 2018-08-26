@@ -137,7 +137,7 @@ class GUI(tk.Tk):
         #Temporary input data
 
         binInput = sim.CreateBinaryStream(4800)
-      ` binInput = sim.ImageToBinary(self.path)
+        binInput = sim.ImageToBinary(self.path)
     
         if numReceivers == 1:
             res = sim.Run2by1(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)

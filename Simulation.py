@@ -85,6 +85,8 @@ class Simulation():
                 # else use sphere detection
 
                 progress = float(len(binOutput))/float(len(binInput))
+                #.progressInt = int(progress)
+               
 
         numErrors = 0
 
@@ -92,12 +94,15 @@ class Simulation():
             if binInput[n] != binOutput[n]:
                 numErrors += 1
                 
+        self.BinaryToImage(binOutput)     
+        
         BER = float(numErrors) /  float(len(binInput))     
         res = SimulationResults(binOutput, BER, numErrors)
         return res
     
     def Run2by2(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
         binOutput = ''
+        binInput = self.PadBinary(binInput,modulationScheme)
         rec = Receiver()
         rec2 = Receiver()
         al = AlamoutiScheme(transmitPower)
@@ -202,7 +207,7 @@ class Simulation():
 
                 progress = float(len(binOutput))/float(len(binInput))
                 #.progressInt = int(progress)
-                print progress
+
 
         numErrors = 0
 
@@ -228,24 +233,23 @@ class Simulation():
         return self.rwControl.imageBinaryStr
     
     def BinaryToImage(self, binString):
-        imageData = self.rwControl.BinStrToPBytes(self.rwControl.imageBinaryStr)
+        imageData = self.rwControl.BinStrToPBytes(binString)
         self.rwControl.WriteFile(imageData)
-    
-    def WriteGraphToFile(self, graph, newFileName, fileLocation = GlobalSettings.imageFolderPath):
-        print "Creating File"
-        
+           
     def PadBinary(self, binInput, ModType):
+
         if(ModType == ModulationType.BPSK and len(binInput)%2 != 0):
             binInput+= '0'
         elif(ModType == ModulationType.QPSK and len(binInput)%4 != 0):
-            for i in range(len(binInput)%4):
+            for i in range(4-len(binInput)%4):
                 binInput+= '0'
         elif(ModType == ModulationType.QAM16 and len(binInput)%8 != 0):
-            for i in range(len(binInput)%8):
+            for i in range(8-len(binInput)%8):
                 binInput+= '0'
         elif(ModType == ModulationType.QAM64 and len(binInput)%12 != 0):
-            for i in range(len(binInput)%8):
+            for i in range(12-len(binInput)%12):
                 binInput+= '0'
+               
         return binInput
     
     def SplitInput(self, binInput):
