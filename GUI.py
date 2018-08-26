@@ -17,6 +17,8 @@ class GUI(tk.Tk):
         tk.Tk.__init__(self)
         self.resizable(width = False, height = False)
         self.title("OSTBC Simulation")
+        self.protocol("WM_DELETE_WINDOW", self.CloseApp)
+        self.sim = Simulation()
         self.enumDictionary = {
                 "BPSK": ModulationType.BPSK,
                 "QPSK": ModulationType.QPSK,
@@ -89,6 +91,7 @@ class GUI(tk.Tk):
         origImageLabel = tk.Label(leftFrame, text = "Original Image :")
         origImageLabel.grid(row = 3, column = 0)
         img = self.OpenImage(getcwd() + '\AppData' + '\\' + 'PH_image.png')
+        self.path = getcwd() + '\AppData' + '\\' + 'PH_image.png'
         photo = ImageTk.PhotoImage(img)
         self.picLabel = tk.Label(master = leftFrame, image = photo)
         self.picLabel.image = photo # keep a reference!
@@ -113,7 +116,7 @@ class GUI(tk.Tk):
 
         
         #Simulate Button
-        simulateButton = tk.Button(leftFrame, text = "Simulate",command = lambda:self.Start())
+        simulateButton = tk.Button(leftFrame, text = "Simulate",command = lambda:self.Begin())
         simulateButton.grid(row = 5,column = 0)
         
         
@@ -134,7 +137,6 @@ class GUI(tk.Tk):
         except:
             print "Alert: Input Error"
  
-        self.sim = Simulation()
         #Temporary input data
 
         binInput = self.sim.CreateBinaryStream(4800)
@@ -147,7 +149,10 @@ class GUI(tk.Tk):
 
         self.dataLabel.config(text = "BER: "+str(res.BER))
         self.OutputImage(self.sim, False)
+        print threading.enumerate() 
         
+    def CloseApp(self):
+        self.destroy()
 
     def GetInputData(self):
         modType = self.modType.get()
@@ -191,16 +196,44 @@ class GUI(tk.Tk):
                 break
             time.sleep(0.1)
         
-        
     def Refresh(self):
         self.update()
         self.after(1000,self.Refresh)
 
-    def Start(self):
+    def Begin(self):
+        for i in threading.enumerate():
+            if(i.name == "meterThread"):
+                self.meterThread.ForceClose()
+        print threading.enumerate() 
         self.Refresh()
-        threading.Thread(target=self.RunSimulation).start()
-        threading.Thread(target=self.UpdateMeter).start()
+        self.simThread = threading.Thread(name='simThread', target=self.RunSimulation).start()
+        self.meterThread = meterThread(self)
+        self.meterThread.start()
         
+class meterThread(threading.Thread):
+    def __init__(self, GUI):
+        threading.Thread.__init__(self)
+        self.name = "meterThread"
+        self.sim = GUI.sim
+        self.GUI = GUI
+        
+    def run(self):
+        self.close = False
+        print "Starting meterThread"
+        while self.close == False:
+            self.GUI.progress["value"] = self.sim.progressInt
+            print self.sim.progressInt
+            time.sleep(0.001)
+            if(self.sim.progressInt == 1000):
+                self.GUI.progress["value"] = 1000
+                self.close = True
+        print "closing meterThread"
+        
+    def ForceClose(self):
+        print ""
+        print "here"
+        self.close = True
+    
     
 GUI = GUI()
 GUI.mainloop()
