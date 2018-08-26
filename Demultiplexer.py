@@ -2,9 +2,10 @@ from OSTBCEnums import MultiplexerType
 import numpy as np
 import GlobalSettings
 from scipy.signal import butter, filtfilt
+import matplotlib.pyplot as plot
 
 class Demultiplexer():
-    def __init__(self, muxType, signal0, signal1, carrierFrequency = GlobalSettings.carrierFrequency ,muxCarrierFrequency = GlobalSettings.multiplexCarrierFrequency, messageFrequency = GlobalSettings.messageFrequency, carrierAmplitude = GlobalSettings.multiplexCarrierAmplitude, sampleTime = GlobalSettings.sampleTime):
+    def __init__(self, muxType, signal0, signal1 , carrierFrequency = GlobalSettings.carrierFrequency ,muxCarrierFrequency = GlobalSettings.multiplexCarrierFrequency, messageFrequency = GlobalSettings.messageFrequency, carrierAmplitude = GlobalSettings.multiplexCarrierAmplitude, sampleTime = GlobalSettings.sampleTime):
         self.fmux = muxCarrierFrequency
         self.fc = carrierFrequency
         self.fm = messageFrequency
@@ -12,7 +13,7 @@ class Demultiplexer():
         self.ts = sampleTime
         self.type = muxType
         self.time = np.arange(0,1/self.fm,self.ts)
-        self.roll = int((1.0/self.fc)/4.0*100000)
+        self.roll = int((1.0/self.fc)/4.0*(1.0/self.ts))
         self.quaterPoint = int(len(self.time)/4.0) #used to ensure correct normaliZaTION
         #below we handle transmitters
         self.s0, self.h0 = self.SignalDetector(signal0)
@@ -44,7 +45,7 @@ class Demultiplexer():
             lpfSignal = np.array([((x * 0.705405261084362) + 0.09967367179518072) for x in lpfSignal]) #Corrects clean pilot to 0.9999999999999984 bandpass fikltered pilot
         if(pilot == False):
             lpfSignal = np.roll(lpfSignal, -int(self.roll * 0.35))
-        dc = np.mean(lpfSignal)
+        dc = np.mean(lpfSignal[self.quaterPoint:len(self.time)-self.quaterPoint])
         noDCSignal = np.array([x-dc for x in lpfSignal])
         demodulatedSignalMax = np.amax(noDCSignal[self.quaterPoint:len(self.time)-self.quaterPoint])
         correctedSignal = np.array([x*(1/demodulatedSignalMax) for x in noDCSignal])
@@ -71,11 +72,11 @@ class Demultiplexer():
         return y, z
     
     def ChannelEstimator(self, pilot, signal):
-        maxPilot = np.amax(pilot)
-        maxSignal = float(np.amax(signal))
+        maxPilot = float(np.amax(pilot[self.quaterPoint:len(self.time)-self.quaterPoint]))
+        maxSignal = float(np.amax(signal[self.quaterPoint:len(self.time)-self.quaterPoint]))
         difference = np.divide(maxPilot,maxSignal)
         ampFixSignal = np.array([x*difference for x in signal])
-        crossCorrelated = np.correlate(ampFixSignal, pilot)
+        crossCorrelated = np.correlate(ampFixSignal, pilot, "full")
         peak = np.argmax(crossCorrelated)
         period = float(1.0/self.fc) #in this case for my pilot
         length = period/(self.ts)

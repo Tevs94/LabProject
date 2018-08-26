@@ -6,22 +6,29 @@ import GlobalSettings
 import random
 import Multiplexer as Multiplexer
 import Demultiplexer as Demultiplexer
+import FileManager as FileManager
+from os import getcwd
 from copy import deepcopy
 
 class Simulation():
+    def __init__(self):
+        self.rwControl = FileManager.FileManager()
+    
     def Run2by1(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
+
         binOutput = ''
+        binInput = self.PadBinary(binInput,modulationScheme)
         rec = Receiver()
         al = AlamoutiScheme(transmitPower)
         inputStrings = self.SplitInput(binInput)
         progress = 0.0
+        self.progressInt = 0
         
         for binString in inputStrings:
-            
             transmissions = al.CreateTransmissions(binString,modulationScheme)
                 
             for n in range(len(transmissions[0])/2):
-
+              
                 ch0 = FadingChannel(noiseDeviation)
                 ch1 = FadingChannel(noiseDeviation)
                    
@@ -194,12 +201,16 @@ class Simulation():
                 # else use sphere detection
 
                 progress = float(len(binOutput))/float(len(binInput))
+                #.progressInt = int(progress)
+                print progress
 
         numErrors = 0
 
         for n in range(len(binInput)):
             if binInput[n] != binOutput[n]:
                 numErrors += 1
+                
+        self.BinaryToImage(binOutput)
                 
         BER = float(numErrors) /  float(len(binInput))     
         res = SimulationResults(binOutput, BER, numErrors)
@@ -212,6 +223,31 @@ class Simulation():
             bs += str(random.randint(0,1))
         return bs
     
+    def ImageToBinary(self, path = getcwd() + '\AppData' + '\\' + 'PH_image.png'):
+        self.rwControl.ReadFile(path)
+        return self.rwControl.imageBinaryStr
+    
+    def BinaryToImage(self, binString):
+        imageData = self.rwControl.BinStrToPBytes(self.rwControl.imageBinaryStr)
+        self.rwControl.WriteFile(imageData)
+    
+    def WriteGraphToFile(self, graph, newFileName, fileLocation = GlobalSettings.imageFolderPath):
+        print "Creating File"
+        
+    def PadBinary(self, binInput, ModType):
+        if(ModType == ModulationType.BPSK and len(binInput)%2 != 0):
+            binInput+= '0'
+        elif(ModType == ModulationType.QPSK and len(binInput)%4 != 0):
+            for i in range(len(binInput)%4):
+                binInput+= '0'
+        elif(ModType == ModulationType.QAM16 and len(binInput)%8 != 0):
+            for i in range(len(binInput)%8):
+                binInput+= '0'
+        elif(ModType == ModulationType.QAM64 and len(binInput)%12 != 0):
+            for i in range(len(binInput)%8):
+                binInput+= '0'
+        return binInput
+    
     def SplitInput(self, binInput):
         inputStrings = ['']
         numStrings = 0
@@ -223,7 +259,7 @@ class Simulation():
                 inputStrings.append('')
                 inputStrings[numStrings] += bit
         return inputStrings
-    
+
 class SimulationResults():
     #storage class for all the results of the simulation
     def __init__(self, outputBin, BER, numErrors):
