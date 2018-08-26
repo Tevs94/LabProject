@@ -1,12 +1,12 @@
 import Tkinter as tk
 from PIL import ImageTk, Image
-import tkMessageBox
-import FadingChannel as Channel
 from OSTBCEnums import ModulationType, MultiplexerType, DecoderType
-from Simulation import Simulation, SimulationResults
+from Simulation import Simulation
 import numpy as np
-import GlobalSettings
 from os import getcwd
+import matplotlib
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.figure import Figure
 import tkFileDialog 
 import ttk
 
@@ -28,8 +28,6 @@ class GUI(tk.Tk):
                 
         }
         
-        
-        
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
         leftFrame = tk.Frame(container)
@@ -39,7 +37,7 @@ class GUI(tk.Tk):
         
         #Left Frame
         optionsFrame = tk.Frame(leftFrame)
-        optionsFrame.grid(row = 1, column = 0, padx = 10, pady = 20)
+        optionsFrame.grid(row = 1, column = 0, padx = 10, pady = 10)
         
         #Options for simulation
         modTypeLabel = tk.Label(optionsFrame, text = "Modulation Scheme:")
@@ -90,17 +88,9 @@ class GUI(tk.Tk):
         photo = ImageTk.PhotoImage(img)
         self.picLabel = tk.Label(master = leftFrame, image = photo)
         self.picLabel.image = photo # keep a reference!
-        self.picLabel.grid(row = 4,column = 0, padx = 10, pady = 10)
+        self.picLabel.grid(row = 4,column = 0, padx = 10, pady = 2)
         self.picLabel.bind('<Button-1>', self.OnClick)
         
-        #Display output Image
-        recImageLabel = tk.Label(rightFrame, text = "Received Image :")
-        recImageLabel.grid(row = 3, column = 0)
-        img2 = self.OpenImage(getcwd() + '\AppData' + '\\' + 'PH_image2.png')
-        photo2 = ImageTk.PhotoImage(img2)
-        self.picLabel2 = tk.Label(master = rightFrame, image = photo2)
-        self.picLabel2.image = photo2 # keep a reference!
-        self.picLabel2.grid(row = 4,column = 0, padx = 10, pady = 10)
         
         #Progress Bar
         self.progress = ttk.Progressbar(self, orient="horizontal", length=200, mode="determinate")
@@ -116,10 +106,41 @@ class GUI(tk.Tk):
         
         
         #Right Frame
+        #Display output Image
+        self.resultsHeadingLabel = tk.Label(rightFrame, text = "Data from the simulation will be displayed here")
+        self.resultsHeadingLabel.grid(row = 1,padx = 0 , pady = 25)
         
-        self.dataLabel = tk.Label(rightFrame, text = "Data from the simulation will be displayed here")
-        self.dataLabel.grid(row = 1,padx = 0)
+        self.sizeLabel = tk.Label(rightFrame, text = "File size(bits):")
+        self.sizeLabel.grid(row = 2,padx = 0, pady = 2)
         
+        self.numErrorsLabel = tk.Label(rightFrame, text = "Number of errors(bits):")
+        self.numErrorsLabel.grid(row = 3,padx = 0)
+        
+        self.BERLabel = tk.Label(rightFrame, text = "BER:")
+        self.BERLabel.grid(row = 4,padx = 0, pady = 2)
+        
+        self.numTransmissionsLabel = tk.Label(rightFrame, text = "Number of transmissions:")
+        self.numTransmissionsLabel.grid(row = 5,padx = 0, pady = 2)
+        
+        emptyPadding = tk.Label(rightFrame)
+        emptyPadding.grid(row = 6, pady = 4)
+        
+        recImageLabel = tk.Label(rightFrame, text = "Received Image :")
+        recImageLabel.grid(row =7, column = 0, pady = 2)
+        img2 = self.OpenImage(getcwd() + '\AppData' + '\\' + 'PH_image2.png')
+        photo2 = ImageTk.PhotoImage(img2)
+        self.picLabel2 = tk.Label(master = rightFrame, image = photo2)
+        self.picLabel2.image = photo2 # keep a reference!
+        self.picLabel2.grid(row = 8,column = 0, padx = 10, pady = 2)
+        
+        graphButtons = tk.Label(rightFrame)
+        graphButtons.grid(row = 9, pady = 2)
+        self.hGraphButton = tk.Button(graphButtons, text = "Show Graph of |H|", state = tk.DISABLED)
+        self.hGraphButton.grid(row = 0,column = 0, pady = 0, padx = 2)
+        self.transmissionExButton = tk.Button(graphButtons, text = "Show example of Transmission", state = tk.DISABLED)
+        self.transmissionExButton.grid(row = 0,column = 1, pady = 0, padx = 2)
+        
+       
     def RunSimulation(self):
         #Get input data
         try:
@@ -136,7 +157,6 @@ class GUI(tk.Tk):
         
         #Temporary input data
 
-        binInput = sim.CreateBinaryStream(4800)
         binInput = sim.ImageToBinary(self.path)
     
         if numReceivers == 1:
@@ -144,9 +164,9 @@ class GUI(tk.Tk):
         elif numReceivers == 2:
             res = sim.Run2by2(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)     
 
-        self.dataLabel.config(text = "BER: "+str(res.BER))
+        self.OutputData(res)
         self.OutputImage(sim, False)
-        
+       
 
     def GetInputData(self):
         modType = self.modType.get()
@@ -168,7 +188,7 @@ class GUI(tk.Tk):
         heightRatio = int((float(self.original.size[1])*float(perWidth)))
         resizedImage = self.original.resize((width, heightRatio),Image.ANTIALIAS)
         return resizedImage
-    
+
     def OutputImage(self, sim, show = False):
         try:
             img = ImageTk.PhotoImage(self.OpenImage(getcwd() + '\Images' + '\\' + sim.rwControl.imageName))
@@ -182,7 +202,28 @@ class GUI(tk.Tk):
             self.picLabel2.configure(image=photo2)
             self.picLabel2.image = photo2
         sim.rwControl.ClearGlobals()
+     
+    def OutputData(self, simRes):
+        self.resultsHeadingLabel.config(text = "Simulation Completed!")
+        self.sizeLabel.config(text = "File size(bits): " + str(simRes.fileSize))
+        self.numErrorsLabel.config(text = "Number of errors(bits): "+str(simRes.numErrors))
+        self.BERLabel.config(text = "BER: "+str(simRes.BER))
+        self.numTransmissionsLabel.config(text = "Number of transmissions: "+str(simRes.numTransmissions))
+        self.hGraphButton.config(command = lambda:self.CreateGraphWindow("Magnitude of H", simRes.graphMagH,range(len(simRes.graphMagH))))
+        self.hGraphButton.config(state = tk.NORMAL)
+        self.transmissionExButton.config(command = lambda:self.CreateGraphWindow("Transmission example", simRes.transmissionEx,range(len(simRes.transmissionEx))))
+        self.transmissionExButton.config(state = tk.NORMAL)
         
+    def CreateGraphWindow(self, title, data, xAxisPoints):
+        graphWindow = tk.Toplevel(self)
+        fig = Figure(figsize=(5,4), dpi=100)
+        subPlot = fig.add_subplot(111)
+        subPlot.set_title(title)
+        subPlot.plot(xAxisPoints,data)
+        dataPlot = FigureCanvasTkAgg(fig, master=graphWindow)
+        dataPlot.show()
+        dataPlot.get_tk_widget().pack()
+
     
 GUI = GUI()
 GUI.mainloop()
