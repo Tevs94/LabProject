@@ -20,19 +20,24 @@ class Simulation():
         binInput = self.PadBinary(binInput,modulationScheme)
         rec = Receiver()
         al = AlamoutiScheme(transmitPower)
+        numTransmissions = 0
+        hData = []
         inputStrings = self.SplitInput(binInput)
         progress = 0.0
         self.progressInt = 0
         
         for binString in inputStrings:
             transmissions = al.CreateTransmissions(binString,modulationScheme)
-                
-            for n in range(len(transmissions[0])/2):
               
+            for n in range(len(transmissions[0])/2):
+                
                 ch0 = FadingChannel(noiseDeviation)
                 ch1 = FadingChannel(noiseDeviation)
-                   
+                
+                hData.append(abs(ch0.h))
+                
                 if(estimationMethod == None):
+                    transmissionEx = deepcopy(transmissions[0][0]).wave  
                     #Timeslot1
                     ch0.ApplyFadingToTransmission(transmissions[0][2*n])
                     ch1.ApplyFadingToTransmission(transmissions[1][2*n])
@@ -53,6 +58,7 @@ class Simulation():
                     Mux11 = Multiplexer.Multiplexer(estimationMethod,transmissions[1][2*n])
                     transmissions[0][2*n].OverideWave(Mux10.wave)
                     transmissions[1][2*n].OverideWave(Mux11.wave)
+                    transmissionEx = deepcopy(transmissions[0][0]).wave   
                     ch0.ApplyFadingToTransmission(transmissions[0][2*n])
                     ch1.ApplyFadingToTransmission(transmissions[1][2*n])
                     Demux1 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][2*n].wave, transmissions[1][2*n].wave)
@@ -83,6 +89,8 @@ class Simulation():
                     binOutput += rec.MLDSymbolToBinary(output[0], modulationScheme,transmitPower)
                     binOutput += rec.MLDSymbolToBinary(output[1], modulationScheme,transmitPower)
                 # else use sphere detection
+                
+                numTransmissions +=4
 
                 progress = float(len(binOutput))/float(len(binInput))
                 self.progressInt = int(progress * 1000)
@@ -97,7 +105,7 @@ class Simulation():
         self.BinaryToImage(binOutput)     
         
         BER = float(numErrors) /  float(len(binInput))     
-        res = SimulationResults(binOutput, BER, numErrors)
+        res = SimulationResults(binOutput, BER, len(binInput), numErrors, numTransmissions, hData, transmissionEx)
         return res
     
     def Run2by2(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
@@ -106,12 +114,15 @@ class Simulation():
         rec = Receiver()
         rec2 = Receiver()
         al = AlamoutiScheme(transmitPower)
+        numTransmissions = 0
+        hData = []
         inputStrings = self.SplitInput(binInput)
         progress = 0.0
         
         for binString in inputStrings:
             
             transmissions = al.CreateTransmissions(binString,modulationScheme)
+            transmissionEx = deepcopy(transmissions[0][0]).wave  
             #transmissions that will go to receiver 2
             transmissions2 = deepcopy(transmissions)
             
@@ -121,7 +132,9 @@ class Simulation():
                 ch1 = FadingChannel(noiseDeviation)
                 ch2 = FadingChannel(noiseDeviation)
                 ch3 = FadingChannel(noiseDeviation)
-                   
+                
+                hData.append(abs(ch0.h))
+                
                 if(estimationMethod == None):
                     #Timeslot1
                     ch0.ApplyFadingToTransmission(transmissions[0][2*n])
@@ -156,6 +169,7 @@ class Simulation():
                     transmissions[1][2*n].OverideWave(Mux11.wave)
                     transmissions2[0][2*n].OverideWave(Mux12.wave)
                     transmissions2[1][2*n].OverideWave(Mux13.wave)
+                    transmissionEx = deepcopy(transmissions[0][0]).wave  
                     ch0.ApplyFadingToTransmission(transmissions[0][2*n])
                     ch1.ApplyFadingToTransmission(transmissions[1][2*n])
                     ch2.ApplyFadingToTransmission(transmissions2[0][2*n])
@@ -205,6 +219,7 @@ class Simulation():
                     binOutput += rec.MLDSymbolToBinary(output[1], modulationScheme,transmitPower)
                 # else use sphere detection
 
+                numTransmissions +=4
                 progress = float(len(binOutput))/float(len(binInput))
                 #.progressInt = int(progress)
 
@@ -218,7 +233,7 @@ class Simulation():
         self.BinaryToImage(binOutput)
                 
         BER = float(numErrors) /  float(len(binInput))     
-        res = SimulationResults(binOutput, BER, numErrors)
+        res = SimulationResults(binOutput, BER, len(binInput), numErrors, numTransmissions, hData, transmissionEx)
         return res
     
     def CreateBinaryStream(self, length):
@@ -266,8 +281,12 @@ class Simulation():
 
 class SimulationResults():
     #storage class for all the results of the simulation
-    def __init__(self, outputBin, BER, numErrors):
+    def __init__(self, outputBin, BER, fileSize, numErrors, numTransmissions, graphMagH, transmissionEx):
         self.output = outputBin
         self.BER = BER
+        self.fileSize = fileSize
         self.numErrors = numErrors
+        self.numTransmissions = numTransmissions
+        self.graphMagH = graphMagH
+        self.transmissionEx = transmissionEx
 
