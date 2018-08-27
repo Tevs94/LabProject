@@ -9,12 +9,16 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import tkFileDialog 
 import ttk
+import threading
+import time
 
 class GUI(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
         self.resizable(width = False, height = False)
         self.title("OSTBC Simulation")
+        self.protocol("WM_DELETE_WINDOW", self.CloseApp)
+        self.sim = Simulation()
         self.enumDictionary = {
                 "BPSK": ModulationType.BPSK,
                 "QPSK": ModulationType.QPSK,
@@ -85,6 +89,7 @@ class GUI(tk.Tk):
         origImageLabel = tk.Label(leftFrame, text = "Original Image :")
         origImageLabel.grid(row = 3, column = 0)
         img = self.OpenImage(getcwd() + '\AppData' + '\\' + 'PH_image.png')
+        self.path = getcwd() + '\AppData' + '\\' + 'PH_image.png'
         photo = ImageTk.PhotoImage(img)
         self.picLabel = tk.Label(master = leftFrame, image = photo)
         self.picLabel.image = photo # keep a reference!
@@ -101,8 +106,8 @@ class GUI(tk.Tk):
 
         
         #Simulate Button
-        simulateButton = tk.Button(leftFrame, text = "Simulate",command = lambda:self.RunSimulation())
-        simulateButton.grid(row = 5,column = 0)
+        self.simulateButton = tk.Button(leftFrame, text = "Simulate",command = lambda:self.RunSimulation())
+        self.simulateButton.grid(row = 5,column = 0)
         
         
         #Right Frame
@@ -153,25 +158,17 @@ class GUI(tk.Tk):
         except:
             print "Alert: Input Error"
  
-        sim = Simulation()
+        binInput = self.sim.ImageToBinary(self.path)
         
-        #Temporary input data
+        self.Refresh()
+        simThread = SimulationThread(self, binInput, modType, noiseStandardDeviation, pilotType, decoderType, numReceivers, self.sim)
+        simThread.start()
+        meterThread = MeterThread(self,simThread)
+        meterThread.start()
+        
+    def CloseApp(self):
+        self.destroy()
 
-        binInput = sim.ImageToBinary(self.path)
-    
-        if numReceivers == 1:
-            res = sim.Run2by1(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
-        elif numReceivers == 2:
-            res = sim.Run2by2(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)     
-
-        self.OutputData(res)
-        self.OutputImage(sim, True)
-       
-
-    def GetInputData(self):
-        modType = self.modType.get()
-        return modType
-    
     def OnClick(self, event=None):
         tk.filename = ""
         tk.filename = tkFileDialog.askopenfilename(initialdir = getcwd() + '\Upload Image Folder',title = "Select file",filetypes = [("png files","*.png")])
@@ -202,7 +199,19 @@ class GUI(tk.Tk):
             self.picLabel2.configure(image=photo2)
             self.picLabel2.image = photo2
         sim.rwControl.ClearGlobals()
-     
+
+    def Refresh(self):
+        self.update()
+        self.after(1000,self.Refresh)      
+        
+    def EnableSimulateButton(self, enabledBool):
+        if enabledBool == True:
+            self.simulateButton.configure(state = tk.NORMAL)
+            self.simulateButton.configure(text = "Simulate")
+        else:
+            self.simulateButton.configure(text = "Running Simulation")
+            self.simulateButton.configure(state = tk.DISABLED)
+         
     def OutputData(self, simRes):
         self.resultsHeadingLabel.config(text = "Simulation Completed!")
         self.sizeLabel.config(text = "File size(bits): " + str(simRes.fileSize))
@@ -222,8 +231,53 @@ class GUI(tk.Tk):
         subPlot.plot(xAxisPoints,data)
         dataPlot = FigureCanvasTkAgg(fig, master=graphWindow)
         dataPlot.show()
-        dataPlot.get_tk_widget().pack()
+        dataPlot.get_tk_widget().pack()        
 
-    
+class MeterThread(threading.Thread):
+    def __init__(self, GUI, simThread):
+        threading.Thread.__init__(self)
+        self.name = "meterThread"
+        self.sim = simThread.sim
+        self.GUI = GUI
+        
+    def run(self):
+        self.close = False
+        while self.close == False:
+            self.GUI.progress["value"] = self.sim.progressInt
+            time.sleep(0.01)
+            if(self.sim.progressInt == 1000):
+                self.GUI.progress["value"] = 1000
+                self.close = True
+        print "closing meterThread"
+        
+    def ForceClose(self):
+        self.close = True
+        
+        
+class SimulationThread(threading.Thread):
+    def __init__(self, GUI,binInput,modType,noiseStandardDeviation,pilotType,decoderType,numReceivers, simObject):
+        threading.Thread.__init__(self)
+        self.name = "simulationThread"
+        self.GUI = GUI
+        self.binInput = binInput
+        self.modType = modType
+        self.noiseStandardDeviation = noiseStandardDeviation
+        self.pilotType = pilotType
+        self.decoderType = decoderType
+        self.numReceivers = numReceivers 
+        self.sim = simObject
+        
+    def run(self):
+        self.GUI.EnableSimulateButton(False)
+        if(self.numReceivers == 1):
+            res = self.sim.Run2by1(self.binInput,self.modType,self.noiseStandardDeviation,1,self.pilotType,self.decoderType)
+        else:
+            res = self.sim.Run2by2(self.binInput,self.modType,self.noiseStandardDeviation,1,self.pilotType,self.decoderType)
+        self.GUI.OutputData(res)
+        self.GUI.OutputImage(self.sim, True)
+        self.GUI.EnableSimulateButton(True)
+        print "SimulationThread deleted"
+   
+
 GUI = GUI()
 GUI.mainloop()
