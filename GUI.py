@@ -248,7 +248,7 @@ class MeterThread(threading.Thread):
             if(self.sim.progressInt == 1000):
                 self.GUI.progress["value"] = 1000
                 self.close = True
-        print "closing meterThread"
+
         
     def ForceClose(self):
         self.close = True
@@ -274,9 +274,9 @@ class SimulationThread(threading.Thread):
         else:
             res = self.sim.Run2by2(self.binInput,self.modType,self.noiseStandardDeviation,1,self.pilotType,self.decoderType)
         self.GUI.OutputData(res)
-        self.GUI.OutputImage(self.sim, True)
+        self.GUI.OutputImage(self.sim, False)
         self.GUI.EnableSimulateButton(True)
-        print "SimulationThread deleted"
+
    
 
 GUI = GUI()
