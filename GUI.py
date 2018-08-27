@@ -116,8 +116,8 @@ class GUI(tk.Tk):
 
         
         #Simulate Button
-        simulateButton = tk.Button(leftFrame, text = "Simulate",command = lambda:self.Begin())
-        simulateButton.grid(row = 5,column = 0)
+        self.simulateButton = tk.Button(leftFrame, text = "Simulate",command = lambda:self.RunSimulation())
+        self.simulateButton.grid(row = 5,column = 0)
         
         
         #Right Frame
@@ -133,31 +133,25 @@ class GUI(tk.Tk):
             decoderType = self.enumDictionary.get(self.decodeMethod.get())
             SNR = self.SNR.get()
             noiseStandardDeviation = np.sqrt(np.power(10.0, (-1*SNR)))
+            
             numReceivers = self.RecNum.get()
         except:
             print "Alert: Input Error"
  
         #Temporary input data
 
-        binInput = self.sim.CreateBinaryStream(4800)
-        binInput = self.sim.ImageToBinary(self.path)
-    
-        if numReceivers == 1:
-            res = self.sim.Run2by1(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)
-        elif numReceivers == 2:
-            res = self.sim.Run2by2(binInput,modType,noiseStandardDeviation,1,pilotType,decoderType)     
 
-        self.dataLabel.config(text = "BER: "+str(res.BER))
-        self.OutputImage(self.sim, False)
-        print threading.enumerate() 
+        binInput = self.sim.ImageToBinary(self.path)
+        
+        self.Refresh()
+        simThread = SimulationThread(self, binInput, modType, noiseStandardDeviation, pilotType, decoderType, numReceivers)
+        simThread.start()
+        meterThread = MeterThread(self,simThread)
+        meterThread.start()
         
     def CloseApp(self):
         self.destroy()
-
-    def GetInputData(self):
-        modType = self.modType.get()
-        return modType
-    
+   
     def OnClick(self, event=None):
         tk.filename = ""
         tk.filename = tkFileDialog.askopenfilename(initialdir = getcwd() + '\Upload Image Folder',title = "Select file",filetypes = [("png files","*.png")])
@@ -188,52 +182,64 @@ class GUI(tk.Tk):
             self.picLabel2.configure(image=photo2)
             self.picLabel2.image = photo2
         sim.rwControl.ClearGlobals()
-        
-    def UpdateMeter(self):
-        while(self.sim.progressInt < 1001):
-            self.progress["value"] = self.sim.progressInt
-            if(self.sim.progressInt == 1000):
-                break
-            time.sleep(0.1)
-        
+
     def Refresh(self):
         self.update()
-        self.after(1000,self.Refresh)
-
-    def Begin(self):
-        for i in threading.enumerate():
-            if(i.name == "meterThread"):
-                self.meterThread.ForceClose()
-        print threading.enumerate() 
-        self.Refresh()
-        self.simThread = threading.Thread(name='simThread', target=self.RunSimulation).start()
-        self.meterThread = meterThread(self)
-        self.meterThread.start()
+        self.after(1000,self.Refresh)      
         
-class meterThread(threading.Thread):
-    def __init__(self, GUI):
+    def EnableSimulateButton(self, enabledBool):
+        if enabledBool == True:
+            self.simulateButton.configure(state = tk.NORMAL)
+            self.simulateButton.configure(text = "Simulate")
+        else:
+            self.simulateButton.configure(text = "Running Simulation")
+            self.simulateButton.configure(state = tk.DISABLED)
+            
+
+class MeterThread(threading.Thread):
+    def __init__(self, GUI, simThread):
         threading.Thread.__init__(self)
         self.name = "meterThread"
-        self.sim = GUI.sim
+        self.sim = simThread.sim
         self.GUI = GUI
         
     def run(self):
         self.close = False
-        print "Starting meterThread"
         while self.close == False:
             self.GUI.progress["value"] = self.sim.progressInt
-            print self.sim.progressInt
-            time.sleep(0.001)
+            time.sleep(0.01)
             if(self.sim.progressInt == 1000):
                 self.GUI.progress["value"] = 1000
                 self.close = True
         print "closing meterThread"
         
     def ForceClose(self):
-        print ""
-        print "here"
         self.close = True
-    
-    
+        
+        
+class SimulationThread(threading.Thread):
+    def __init__(self, GUI,binInput,modType,noiseStandardDeviation,pilotType,decoderType,numReceivers):
+        threading.Thread.__init__(self)
+        self.name = "simulationThread"
+        self.GUI = GUI
+        self.binInput = binInput
+        self.modType = modType
+        self.noiseStandardDeviation = noiseStandardDeviation
+        self.pilotType = pilotType
+        self.decoderType = decoderType
+        self.numReceivers = numReceivers 
+        self.sim = Simulation()
+        
+    def run(self):
+        self.GUI.EnableSimulateButton(False)
+        if(self.numReceivers == 1):
+            res = self.sim.Run2by1(self.binInput,self.modType,self.noiseStandardDeviation,1,self.pilotType,self.decoderType)
+        else:
+            res = self.sim.Run2by2(self.binInput,self.modType,self.noiseStandardDeviation,1,self.pilotType,self.decoderType)
+        self.GUI.dataLabel.config(text = "BER: "+str(res.BER))
+        #self.GUI.OutputImage(self.sim, False)
+        self.GUI.EnableSimulateButton(True)
+        print "SimulationThread deleted"
+        
 GUI = GUI()
 GUI.mainloop()
