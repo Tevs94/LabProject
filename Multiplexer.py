@@ -29,7 +29,7 @@ class Multiplexer():
         inputSignal[1][:] = self.symbol.wave
         if(self.type == MultiplexerType.FDM): #Perform Coventional AM, currently set up for 2 by 1 with assumption same carrier is fine
             for x in range(0, 2): #Nyquist to fc
-                pilotSignal[x][:] = self.DSB_FC(inputSignal[x][:], 2*self.fc*x)
+                pilotSignal[x][:] = self.DSB_SC(inputSignal[x][:], 2*self.fc*x)
             self.ParallelToSerial(pilotSignal)
         if(self.type == MultiplexerType.OFDM):
             for x in range(0, 2):
@@ -37,13 +37,9 @@ class Multiplexer():
                ifftSignal[x][:] = self.IFFT(pilotSignal[x][:])
                cyclicSignal[x][:] = self.CyclicPrefix(ifftSignal[x][:])
             self.ParallelToSerial(cyclicSignal)
-    
-    def ParallelToSerial(self, signal):
-        tmp = np.array(signal[0]) +  np.array(signal[1])
-        self.wave = np.roll(tmp,500)
             
-#    def ParallelToSerial(self, signal):
-#        self.wave = np.array(signal[0]) +  np.array(signal[1])
+    def ParallelToSerial(self, signal):
+        self.wave = np.array(signal[0]) +  np.array(signal[1])
 #        
     def GeneratePilot(self):
         outputSignal = np.cos(2 * np.pi * self.fc * self.time)
@@ -56,6 +52,11 @@ class Multiplexer():
         carrier = np.array(np.cos(2 * np.pi * (self.fmux + shift) * self.time))
         postCarrierNoAmp = np.multiply(preCarrier,carrier)
         outputSignal = np.multiply(self.ac,postCarrierNoAmp)
+        return outputSignal
+    
+    def DSB_SC(self, signal, shift):
+        carrier = np.array(np.cos(2 * np.pi * (self.fmux + shift) * self.time))
+        outputSignal = np.multiply(signal,carrier)
         return outputSignal
     
     def rect_Modulation(self, signal, shift):
