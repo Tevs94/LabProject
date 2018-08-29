@@ -202,7 +202,7 @@ class GUI(tk.Tk):
 
     def Refresh(self):
         self.update()
-        self.after(1000,self.Refresh)      
+        self.after(500,self.Refresh)      
         
     def EnableSimulateButton(self, enabledBool):
         if enabledBool == True:
@@ -244,7 +244,7 @@ class MeterThread(threading.Thread):
         self.close = False
         while self.close == False:
             self.GUI.progress["value"] = self.sim.progressInt
-            time.sleep(0.01)
+            time.sleep(0.2)
             if(self.sim.progressInt == 1000):
                 self.GUI.progress["value"] = 1000
                 self.close = True
