@@ -29,7 +29,7 @@ class Multiplexer():
         inputSignal[1][:] = self.symbol.wave
         if(self.type == MultiplexerType.FDM): #Perform Coventional AM, currently set up for 2 by 1 with assumption same carrier is fine
             for x in range(0, 2): #Nyquist to fc
-                pilotSignal[x][:] = self.DSB_SC(inputSignal[x][:], 2*self.fc*x)
+                pilotSignal[x][:] = self.DSB_SC(inputSignal[x][:], 8*self.fc*x)
             self.ParallelToSerial(pilotSignal)
         if(self.type == MultiplexerType.OFDM):
             for x in range(0, 2):

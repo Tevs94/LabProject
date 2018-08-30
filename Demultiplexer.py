@@ -8,7 +8,7 @@ from Receiver import Receiver
 from OSTBCEnums import ModulationType, MultiplexerType, DecoderType
 import Multiplexer as Multiplexer
 import matplotlib.pyplot as plot
-from scipy.signal import firwin, convolve
+from scipy.signal import firwin, convolve, freqs
 
 class Demultiplexer():
     def __init__(self, muxType, signal0, signal1 , carrierFrequency = GlobalSettings.carrierFrequency ,muxCarrierFrequency = GlobalSettings.multiplexCarrierFrequency, messageFrequency = GlobalSettings.messageFrequency, carrierAmplitude = GlobalSettings.multiplexCarrierAmplitude, sampleTime = GlobalSettings.sampleTime):
@@ -26,7 +26,7 @@ class Demultiplexer():
 #        self.cleanPilot, self.preAdjustmentCP = self.GeneratePilot()
         self.cleanPilot = self.GeneratePilot(False)
         self.s0, self.h0 = self.SignalDetector(signal0)
-        self.s1, self.h1 = self.SignalDetector(signal1)
+        #self.s1, self.h1 = self.SignalDetector(signal1)
             
     def BandPassFilter(self, lowerLimit, upperLimit, signal,order = 2):
         nyq = 0.5 * (1/self.ts)
@@ -49,11 +49,12 @@ class Demultiplexer():
         y = np.roll(signal, -1* self.roll)
         return y
     
-    def DemodulateDSB_SC(self, signal, frequency, shift):
-        demodCarrier = np.array(np.cos(2 * np.pi * (self.fmux + shift) * self.time))
+    def DemodulateDSB_SC(self, signal, frequency, shift, angle):
+        freq = 2 * np.pi * (self.fmux + shift) * self.time 
+        demodCarrier = np.array(np.cos(freq -angle))       
         preDemod = np.multiply(signal,demodCarrier)
         lpfSignal = self.LowPassFilter(frequency, preDemod) #LPF
-        ampFixSignal = np.array([x*4 for x in lpfSignal])
+        ampFixSignal = np.array([((x*2)) for x in lpfSignal])
         return ampFixSignal
     
     def DemodulateDSB_FC(self, signal, frequency ,pilot = True):
@@ -105,77 +106,107 @@ class Demultiplexer():
         else:
             carrier = np.array(np.cos(2 * np.pi * (self.fmux) * self.time))
             modulatedSignal = np.multiply(pilot,carrier)
-            y = self.DemodulateDSB_SC(modulatedSignal, self.fc, 0)
+            y = self.DemodulateDSB_SC(modulatedSignal, 3*self.fc, 0,0)
             return y
 
     
     def ChannelEstimator(self, pilot, signal):
+
         maxPilot = float(np.amax(pilot[self.quaterPoint:len(self.time)-self.quaterPoint]))
-        maxSignal = float(np.amax(signal[self.quaterPoint:len(self.time)-self.quaterPoint]))
-        print "maxP: ", maxPilot, "maxS: ", maxSignal
-        difference = np.divide(maxSignal,maxPilot) #6,02% error here to magH
-        difference = difference
-        print "difference", difference
+        maxSignal = float(np.amax(signal[self.quaterPoint:len(self.time)-self.quaterPoint]))  
+        magnitude = np.divide(maxSignal,maxPilot) #6,02% error here to magH
+        print "Magnitude: ", magnitude
         factor = np.divide(maxPilot,maxSignal)
+        print "Factor: ", factor
         ampFixSignal = np.array([x*factor for x in signal])
         period = float(1.0/self.fc) #in this case for my pilot
         length = period/(self.ts)
         halfPeriod = int(float(length/2.0))
-        shift = np.argmax(ampFixSignal[self.halfPoint:self.halfPoint + 2*halfPeriod])
+        shift = np.argmax(ampFixSignal[self.halfPoint - halfPeriod:self.halfPoint + halfPeriod])
         angle = 2*np.pi* shift*(1/length)
-        self.channel = (difference * np.cos(angle)) + (1j * difference * np.sin(angle))
-        return self.channel
+        #self.channel = (difference * np.cos(angle)) + (1j * difference * np.sin(angle))
+        return magnitude, angle
         
     def SignalDetector(self, signal):
         if(self.type == MultiplexerType.FDM):    
-            pilotSignal = self.BandPassFilter(self.fmux - 1.2*self.fc,self.fmux + 1.2*self.fc,signal)
-#            pilot, preAdjustmentP = self.DemodulateDSB_SC(pilotSignal, self.fc,0)
-            pilot= self.DemodulateDSB_SC(pilotSignal, self.fc,0)
-            channel = self.ChannelEstimator(self.cleanPilot ,pilot)
-            dataSignal = self.BandPassFilter(self.fmux + self.fc,self.fmux + 3 * self.fc,signal)
-#            data, preAdjustmentD = self.DemodulateDSB_SC(dataSignal, 2 * self.fc,1)
-            data = self.DemodulateDSB_SC(dataSignal, 2 * self.fc,2*self.fc)
+            pilotSignal = self.BandPassFilter(self.fmux - 4*self.fc,self.fmux + 4*self.fc,signal)
+            
+            pilot1= self.DemodulateDSB_SC(pilotSignal, 3*self.fc,0,0)
+            goodMag, badAngle = self.ChannelEstimator(self.cleanPilot ,pilot1)
+            print "bad angle", badAngle
+            pilot2= self.DemodulateDSB_SC(pilotSignal, 3*self.fc,0,badAngle)
+            badMag, goodAngle = self.ChannelEstimator(self.cleanPilot ,pilot2)
+            print "good angle", goodAngle
+            
+            bestMag = max([goodMag, badMag])
+            channel = (bestMag * np.cos(goodAngle)) + (1j *bestMag * np.sin(goodAngle))
+            dataSignal = self.BandPassFilter(self.fmux + 4*self.fc,self.fmux + 12 * self.fc,signal)
+            data = self.DemodulateDSB_SC(dataSignal, 3 * self.fc,8*self.fc,goodAngle)
+            data = 0
             return data, channel
         else:
             a = self.BandPassFilter(self.fmux - self.fc,self.fmux + self.fc,signal,1)
             self.DemodulateDSB_FC(a)
             
+    def FFT(self, signal):
+        n = len(signal) # length of the signal
+        k = np.arange(n)
+        T = n/(1/self.ts)
+        frq = k/T # two sides frequency range
+        frq = frq[range(n/40)] # one side frequency range
+        
+        Y = np.fft.fft(signal)/n # fft computing and normalization
+        Y = Y[range(n/40)]
+        fig, ax = plot.subplots(2, 1)
+        ax[1].plot(frq,abs(Y),'r') # plotting the spectrum
+        ax[1].set_xlabel('Freq (Hz)')
+        ax[1].set_ylabel('|Y(freq)|')
+        
+    def PrintFilter(self,b,a, nyq):
+        plot.figure()
+        plot.clf()
+        w, h = freqs(b, a, worN=2000)
+        plot.plot((nyq/np.pi)*w, abs(h))
+        #plt.xscale('linear')
+        plot.title('Butterworth filter frequency response')
+        plot.xlabel('Frequency [Hz]')
+        plot.ylabel('Amplitude')
+        plot.margins(0, 0.1)
+        plot.grid(which='both', axis='both')
+            
 #Test Code
-binInput = '11'
+binInput = '10'
 rec = Receiver()
 al = AlamoutiScheme()
 transmissions = al.CreateTransmissions(binInput,ModulationType.BPSK)
 n = 1
-plot.figure(12)
-plot.clf()
-mux0 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][0])
-mux1 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][1])
-plot.plot(transmissions[0][0].wave, color='purple')
-plot.plot(transmissions[0][1].wave, color="green")
-plot.figure(13)
-plot.clf()
-plot.plot(mux0.wave, color='purple')
-plot.plot(mux1.wave, color="green")
+#plot.figure(12)
+#plot.clf()
+#mux0 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][0])
+#mux1 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][1])
+#plot.plot(transmissions[0][0].wave, color='purple')
+#plot.plot(transmissions[0][1].wave, color="green")
+#plot.figure(13)
+#plot.clf()
+#plot.plot(mux0.wave, color='purple')
+#plot.plot(mux1.wave, color="green")
 
-for trans in transmissions[0]:
+trans = transmissions[0][0]
 #    plot.figure(n)
 #    plot.clf()
-    ch0 = FadingChannel(0)
-    ch0.h = 1
-    h0c = ch0.h
-    
-    Mux10 = Multiplexer.Multiplexer(MultiplexerType.FDM,trans)
-    trans.OverideWave(Mux10.wave)
-    ch0.ApplyFadingToTransmission(trans)
-    Demux1 = Demultiplexer(MultiplexerType.FDM,trans.wave, trans.wave)
-    trans.OverideWave(Demux1.s0)
-    plot.figure()
-    plot.clf()
-    plot.plot(trans.wave)
-    h0d = Demux1.h0
-    print "Real h0: ", h0c, "Estimated h0: ", h0d
-    print ''
-    n+=1
+ch0 = FadingChannel(0)
+ch0.h = 1-4j
+h0c = ch0.h
+Mux10 = Multiplexer.Multiplexer(MultiplexerType.FDM,trans)
+plot.figure()
+trans.OverideWave(Mux10.wave)
+ch0.ApplyFadingToTransmission(trans)
+Demux1 = Demultiplexer(MultiplexerType.FDM,trans.wave, trans.wave)
+trans.OverideWave(Demux1.s0)
+h0d = Demux1.h0
+print "H0 real", h0c
+print "H0 est", h0d
+n+=1
 
 
 #plot.plot(faded.wave, color='green')
