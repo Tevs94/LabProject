@@ -115,9 +115,7 @@ class Demultiplexer():
         maxPilot = float(np.amax(pilot[self.quaterPoint:len(self.time)-self.quaterPoint]))
         maxSignal = float(np.amax(signal[self.quaterPoint:len(self.time)-self.quaterPoint]))  
         magnitude = np.divide(maxSignal,maxPilot) #6,02% error here to magH
-        print "Magnitude: ", magnitude
         factor = np.divide(maxPilot,maxSignal)
-        print "Factor: ", factor
         ampFixSignal = np.array([x*factor for x in signal])
         period = float(1.0/self.fc) #in this case for my pilot
         length = period/(self.ts)
@@ -128,21 +126,18 @@ class Demultiplexer():
         return magnitude, angle
         
     def SignalDetector(self, signal):
-        if(self.type == MultiplexerType.FDM):    
+        if(self.type == MultiplexerType.FDM):  
             pilotSignal = self.BandPassFilter(self.fmux - 4*self.fc,self.fmux + 4*self.fc,signal)
+            magnitude = self.EstimatePilotMaxWithFFT(pilotSignal)
             
             pilot1= self.DemodulateDSB_SC(pilotSignal, 3*self.fc,0,0)
             goodMag, badAngle = self.ChannelEstimator(self.cleanPilot ,pilot1)
-            print "bad angle", badAngle
             pilot2= self.DemodulateDSB_SC(pilotSignal, 3*self.fc,0,badAngle)
-            badMag, goodAngle = self.ChannelEstimator(self.cleanPilot ,pilot2)
-            print "good angle", goodAngle
+            badMag, goodAngle = self.ChannelEstimator(self.cleanPilot ,pilot2) 
             
-            bestMag = max([goodMag, badMag])
-            channel = (bestMag * np.cos(goodAngle)) + (1j *bestMag * np.sin(goodAngle))
+            channel = (magnitude * np.cos(goodAngle)) + (1j * magnitude* np.sin(goodAngle))
             dataSignal = self.BandPassFilter(self.fmux + 4*self.fc,self.fmux + 12 * self.fc,signal)
             data = self.DemodulateDSB_SC(dataSignal, 3 * self.fc,8*self.fc,goodAngle)
-            data = 0
             return data, channel
         else:
             a = self.BandPassFilter(self.fmux - self.fc,self.fmux + self.fc,signal,1)
@@ -154,7 +149,6 @@ class Demultiplexer():
         T = n/(1/self.ts)
         frq = k/T # two sides frequency range
         frq = frq[range(n/40)] # one side frequency range
-        
         Y = np.fft.fft(signal)/n # fft computing and normalization
         Y = Y[range(n/40)]
         fig, ax = plot.subplots(2, 1)
@@ -173,9 +167,13 @@ class Demultiplexer():
         plot.ylabel('Amplitude')
         plot.margins(0, 0.1)
         plot.grid(which='both', axis='both')
-            
+        
+    def EstimatePilotMaxWithFFT(self, modulatedPilot, pilotMagnitude = 1):       
+        fftPilot = np.fft.fft(modulatedPilot)/len(modulatedPilot) # fft computing and normalization
+        return (max(abs(fftPilot))*4)/pilotMagnitude
+         
 #Test Code
-binInput = '10'
+binInput = '00'
 rec = Receiver()
 al = AlamoutiScheme()
 transmissions = al.CreateTransmissions(binInput,ModulationType.BPSK)
@@ -195,7 +193,7 @@ trans = transmissions[0][0]
 #    plot.figure(n)
 #    plot.clf()
 ch0 = FadingChannel(0)
-ch0.h = 1-4j
+ch0.h = 2-1j
 h0c = ch0.h
 Mux10 = Multiplexer.Multiplexer(MultiplexerType.FDM,trans)
 plot.figure()
