@@ -42,7 +42,7 @@ class Multiplexer():
         self.wave = np.array(signal[0]) +  np.array(signal[1])
 #        
     def GeneratePilot(self):
-        outputSignal = np.cos(2 * np.pi * self.fc * self.time)
+        outputSignal = np.array(np.cos(2 * np.pi * self.fc * self.time))
         return outputSignal
     
     def DSB_FC(self, signal, shift, factor = 1):

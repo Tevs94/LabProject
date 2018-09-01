@@ -9,6 +9,9 @@ from OSTBCEnums import ModulationType, MultiplexerType, DecoderType
 import Multiplexer as Multiplexer
 import matplotlib.pyplot as plot
 from scipy.signal import firwin, convolve, freqs
+from copy import deepcopy
+from Transmission import Transmission
+
 
 class Demultiplexer():
     def __init__(self, muxType, signal0, signal1 , carrierFrequency = GlobalSettings.carrierFrequency ,muxCarrierFrequency = GlobalSettings.multiplexCarrierFrequency, messageFrequency = GlobalSettings.messageFrequency, carrierAmplitude = GlobalSettings.multiplexCarrierAmplitude, sampleTime = GlobalSettings.sampleTime):
@@ -23,8 +26,8 @@ class Demultiplexer():
         self.quaterPoint = int(len(self.time)/4.0) #used to ensure correct normaliZaTION
         self.halfPoint = int(len(self.time)/2.0)
         #below we handle transmitters
-#        self.cleanPilot, self.preAdjustmentCP = self.GeneratePilot()
-        self.cleanPilot = self.GeneratePilot(False)
+        self.fakeTransmission = Transmission(1)
+        self.cleanPilot, self.cosWave = self.GeneratePilot(False)
         self.s0, self.h0 = self.SignalDetector(signal0)
         #self.s1, self.h1 = self.SignalDetector(signal1)
             
@@ -94,7 +97,17 @@ class Demultiplexer():
         return trimBot
     
     def GeneratePilot(self, DSB_FC= True, factor = 1):
-        pilot = np.cos(2 * np.pi * self.fc * self.time)
+        outputSignal = np.array(np.cos(2 * np.pi * self.fc * self.time))
+        period = 1.0/self.fc
+        length = period/(self.ts)
+        peakCount = int(len(self.time)/length) 
+        upPeak = outputSignal[int(1.75*int(length)):int(2.25*int(length))]
+        downPeak = outputSignal[int(2.25*int(length)):int(2.75*int(length))]
+        pilot = [0]*len(self.time)
+        for i in range(0,peakCount):
+            pilot[int(i*length/2):int((i+1) * length/2)] = upPeak 
+        for i in range(peakCount,2*peakCount):
+           pilot[int(i*length/2):int((i+1) * length/2)] = downPeak
         if(DSB_FC == True):
             preCarrier = np.array([(factor * x)+1 for x in pilot])
             carrier = np.array(np.cos(2 * np.pi * (self.fmux) * self.time))
@@ -107,11 +120,10 @@ class Demultiplexer():
             carrier = np.array(np.cos(2 * np.pi * (self.fmux) * self.time))
             modulatedSignal = np.multiply(pilot,carrier)
             y = self.DemodulateDSB_SC(modulatedSignal, 3*self.fc, 0,0)
-            return y
+            return y, outputSignal
 
     
     def ChannelEstimator(self, pilot, signal):
-
         maxPilot = float(np.amax(pilot[self.quaterPoint:len(self.time)-self.quaterPoint]))
         maxSignal = float(np.amax(signal[self.quaterPoint:len(self.time)-self.quaterPoint]))  
         magnitude = np.divide(maxSignal,maxPilot) #6,02% error here to magH
@@ -129,13 +141,58 @@ class Demultiplexer():
         if(self.type == MultiplexerType.FDM):  
             pilotSignal = self.BandPassFilter(self.fmux - 4*self.fc,self.fmux + 4*self.fc,signal)
             magnitude = self.EstimatePilotMaxWithFFT(pilotSignal)
-            
             pilot1= self.DemodulateDSB_SC(pilotSignal, 3*self.fc,0,0)
             goodMag, badAngle = self.ChannelEstimator(self.cleanPilot ,pilot1)
             pilot2= self.DemodulateDSB_SC(pilotSignal, 3*self.fc,0,badAngle)
             badMag, goodAngle = self.ChannelEstimator(self.cleanPilot ,pilot2) 
-            
             channel = (magnitude * np.cos(goodAngle)) + (1j * magnitude* np.sin(goodAngle))
+            
+            
+            
+            
+            correct = [False] * 4
+            channels = [0] * 4
+            channels[0] = (magnitude * np.cos(goodAngle)) + (1j * magnitude* np.sin(goodAngle))
+            print channels[0]
+            self.fakeTransmission.OverideWave(self.cosWave)
+            self.fakeTransmission.MultiplySymbol(channels[0])
+            correct[0] = self.QuadrantSelect(pilot2[4750:5250],self.fakeTransmission.wave[4750:5250])
+            
+            channels[1] = complex(-1*channels[0].real,-1*channels[0].imag)
+            self.fakeTransmission.OverideWave(self.cosWave)
+            self.fakeTransmission.MultiplySymbol(channels[1])
+            correct[1] = self.QuadrantSelect(pilot2[4750:5250],self.fakeTransmission.wave[4750:5250])
+            
+            channels[2] = complex(-1*channels[0].real,channels[0].imag)
+            self.fakeTransmission.OverideWave(self.cosWave)
+            self.fakeTransmission.MultiplySymbol(channels[2])
+            correct[2] = self.QuadrantSelect(pilot2[4750:5250],self.fakeTransmission.wave[4750:5250])
+            
+            channels[3] = complex(channels[0].real,-1*channels[0].imag)
+            self.fakeTransmission.OverideWave(self.cosWave)
+            self.fakeTransmission.MultiplySymbol(channels[3])
+            correct[3] = self.QuadrantSelect(pilot2[4750:5250],self.fakeTransmission.wave[4750:5250])
+            n = 0
+            for truth in correct:
+                if(truth==True):
+                    channel = channels[n]
+                    break
+                n+=1
+            
+            self.fakeTransmission.OverideWave(self.cosWave)
+            self.fakeTransmission.MultiplySymbol(channel)
+            print "here1: ", channel
+            plot.figure()
+            plot.plot(self.fakeTransmission.wave, color='black')
+            plot.plot(pilot2, color='red')
+            maxP = np.argmax(pilot1[:1000])
+            maxT = np.argmax(self.fakeTransmission.wave[:1000])
+            print abs(maxP-maxT)
+            if(abs(maxP-maxT)<= 400):
+                channel = complex(-1*channel.real,-1*channel.imag)
+                self.fakeTransmission.OverideWave(self.cosWave)
+                self.fakeTransmission.MultiplySymbol(channel)
+                
             dataSignal = self.BandPassFilter(self.fmux + 4*self.fc,self.fmux + 12 * self.fc,signal)
             data = self.DemodulateDSB_SC(dataSignal, 3 * self.fc,8*self.fc,goodAngle)
             return data, channel
@@ -171,29 +228,63 @@ class Demultiplexer():
     def EstimatePilotMaxWithFFT(self, modulatedPilot, pilotMagnitude = 1):       
         fftPilot = np.fft.fft(modulatedPilot)/len(modulatedPilot) # fft computing and normalization
         return (max(abs(fftPilot))*4)/pilotMagnitude
+    
+#    def QuadrantSelect(self, pilot, tansmission):
+#        argP = np.argmax(pilot)
+#        tmpP = pilot
+#        tmpP[tmpP < 0]
+#        negValuesP = -1*tmpP
+#        argP = np.argmax(negValuesP)
+#        
+#        tmpT = tansmission
+#        tmpT[tmpT < 0]
+#        negValuesT = -1*tmpT
+#        argT = np.argmax(negValuesT)
+#        print "argP: ", argP, "argT", argT
+#        difference = abs(argP-argT)
+#        if(difference < 50):
+#            return True
+#        else:
+#            return False
+        
+    def QuadrantSelect(self, pilot, tansmission):
+        maxP = np.amax(pilot)
+        maxT = np.amax(tansmission)
+        sumP = np.sum(pilot)
+        sumT = np.sum(tansmission)
+        diffP = sumP-maxP
+        diffT = sumT-maxT
+        difference = abs(diffP-diffT)
+        if(difference < 50):
+            return True
+        else:
+            return False
+
+
+    
          
 #Test Code
-binInput = '00'
+binInput = '10'
 rec = Receiver()
 al = AlamoutiScheme()
 transmissions = al.CreateTransmissions(binInput,ModulationType.BPSK)
-n = 1
-#plot.figure(12)
-#plot.clf()
-#mux0 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][0])
-#mux1 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][1])
-#plot.plot(transmissions[0][0].wave, color='purple')
-#plot.plot(transmissions[0][1].wave, color="green")
-#plot.figure(13)
-#plot.clf()
-#plot.plot(mux0.wave, color='purple')
-#plot.plot(mux1.wave, color="green")
-
+#n = 1
+##plot.figure(12)
+##plot.clf()
+##mux0 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][0])
+##mux1 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][1])
+##plot.plot(transmissions[0][0].wave, color='purple')
+##plot.plot(transmissions[0][1].wave, color="green")
+##plot.figure(13)
+##plot.clf()
+##plot.plot(mux0.wave, color='purple')
+##plot.plot(mux1.wave, color="green")
+#
 trans = transmissions[0][0]
 #    plot.figure(n)
 #    plot.clf()
 ch0 = FadingChannel(0)
-ch0.h = 2-1j
+ch0.h = -0.4-06j
 h0c = ch0.h
 Mux10 = Multiplexer.Multiplexer(MultiplexerType.FDM,trans)
 plot.figure()
@@ -202,10 +293,9 @@ ch0.ApplyFadingToTransmission(trans)
 Demux1 = Demultiplexer(MultiplexerType.FDM,trans.wave, trans.wave)
 trans.OverideWave(Demux1.s0)
 h0d = Demux1.h0
+r0 = rec.CombineReceivedTransmissions(trans,trans)
 print "H0 real", h0c
-print "H0 est", h0d
-n+=1
-
+print "H0 est", h0d, "abs est h: ", abs(h0d)
 
 #plot.plot(faded.wave, color='green')
 #plot.plot(Demux1.s0)
