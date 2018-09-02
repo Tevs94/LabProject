@@ -79,7 +79,7 @@ class Simulation():
                     #Channel Estimation
                     h0 = Demux1.h0
                     h1 = Demux1.h1
-                                     
+
                 #Combining
     
                 output = rec.AlamoutiCombine2by1(h0,h1,r0,r1)
