@@ -79,7 +79,6 @@ class Simulation():
                     #Channel Estimation
                     h0 = Demux1.h0
                     h1 = Demux1.h1
-                    print "Estimated: ", h0, "Real: ",ch0.h
                     
                 #Combining
     

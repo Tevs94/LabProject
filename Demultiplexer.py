@@ -29,28 +29,18 @@ class Demultiplexer():
         self.fakeTransmission = Transmission(1)
         self.cleanPilot, self.cosWave = self.GeneratePilot(False)
         self.s0, self.h0 = self.SignalDetector(signal0)
-        #self.s1, self.h1 = self.SignalDetector(signal1)
+        self.fmux = 3* muxCarrierFrequency
+        if(self.type == MultiplexerType.TDM):
+            self.cleanPilot, self.cosWave = self.GeneratePilot(False,2)
+        self.s1, self.h1 = self.SignalDetector(signal1)
             
     def BandPassFilter(self, lowerLimit, upperLimit, signal,order = 2):
         nyq = 0.5 * (1/self.ts)
         low = lowerLimit/nyq
         high = upperLimit/nyq
         b, a = butter(order, [low, high], btype='band', analog=False) #b = num a = denom
-        #rolled = self.Roller(signal)
         y = filtfilt(b,a,signal, method = 'gust')
-        #derolled = self.DeRoller(y)
-#        nyq = 0.5 * (1/self.ts)
-#        bandpass = firwin(128, [lowerLimit, upperLimit], nyq=nyq, pass_zero=False, window='hamming', scale=False)
-#        filtered = convolve(signal, bandpass, mode='same')
         return y 
-    
-    def Roller(self, signal):
-        y = np.roll(signal, self.roll)
-        return y
-    
-    def DeRoller(self, signal):
-        y = np.roll(signal, -1* self.roll)
-        return y
     
     def DemodulateDSB_SC(self, signal, frequency, shift, angle):
         freq = 2 * np.pi * (self.fmux + shift) * self.time 
@@ -61,14 +51,8 @@ class Demultiplexer():
         return ampFixSignal
     
     def DemodulateDSB_FC(self, signal, frequency ,pilot = True):
-     
         signal[signal < 0] = 0 #Rectify
         lpfSignal = self.LowPassFilter(frequency, signal) #LPF
-        #Fine tunning to remove filter error
-        #if(pilot == True):
-        #    lpfSignal = np.array([((x * 0.705405261084362) + 0.09967367179518072) for x in lpfSignal]) #Corrects clean pilot to 0.9999999999999984 bandpass fikltered pilot
-        #if(pilot == False):
-            #lpfSignal = np.roll(lpfSignal, -int(self.roll * 0.35))
         dc = np.mean(lpfSignal[self.quaterPoint:len(self.time)-self.quaterPoint])
         noDCSignal = np.array([x-dc for x in lpfSignal])
         tmpSignal = noDCSignal[self.quaterPoint:len(self.time)-self.quaterPoint]
@@ -97,44 +81,24 @@ class Demultiplexer():
         return trimBot
     
     def GeneratePilot(self, DSB_FC= True, factor = 1):
-        outputSignal = np.array(np.cos(2 * np.pi * self.fc * self.time))
-        period = 1.0/self.fc
-        length = period/(self.ts)
-        peakCount = int(len(self.time)/length) 
-        upPeak = outputSignal[int(1.75*int(length)):int(2.25*int(length))]
-        downPeak = outputSignal[int(2.25*int(length)):int(2.75*int(length))]
-        pilot = [0]*len(self.time)
-        for i in range(0,peakCount):
-            pilot[int(i*length/2):int((i+1) * length/2)] = upPeak 
-        for i in range(peakCount,2*peakCount):
-           pilot[int(i*length/2):int((i+1) * length/2)] = downPeak
-        if(DSB_FC == True):
-            preCarrier = np.array([(factor * x)+1 for x in pilot])
-            carrier = np.array(np.cos(2 * np.pi * (self.fmux) * self.time))
-            postCarrierNoAmp = np.multiply(preCarrier,carrier)
-            modulatedSignal = np.multiply(self.ac,postCarrierNoAmp)
-            #DSB_FC done now demodulating for expect pilot
-            y, z = self.DemodulateDSB_FC(modulatedSignal, self.fc, 0)
-            return y, z
-        else:
-            carrier = np.array(np.cos(2 * np.pi * (self.fmux) * self.time))
-            modulatedSignal = np.multiply(pilot,carrier)
-            y = self.DemodulateDSB_SC(modulatedSignal, 3*self.fc, 0,0)
-            return y, outputSignal
+        outputSignal = np.array(np.cos(2 * np.pi * factor * self.fc * self.time))
+        carrier = np.array(np.cos(2 * np.pi * (self.fmux) * self.time))
+        modulatedSignal = np.multiply(outputSignal,carrier)
+        y = self.DemodulateDSB_SC(modulatedSignal, 3*self.fc, 0,0)
+        return y, outputSignal
 
     
     def ChannelEstimator(self, pilot, signal):
         maxPilot = float(np.amax(pilot[self.quaterPoint:len(self.time)-self.quaterPoint]))
-        maxSignal = float(np.amax(signal[self.quaterPoint:len(self.time)-self.quaterPoint]))  
+        maxSignal = float(np.amax(signal[self.quaterPoint:len(self.time)-self.quaterPoint]))
         magnitude = np.divide(maxSignal,maxPilot) #6,02% error here to magH
         factor = np.divide(maxPilot,maxSignal)
         ampFixSignal = np.array([x*factor for x in signal])
         period = float(1.0/self.fc) #in this case for my pilot
         length = period/(self.ts)
         halfPeriod = int(float(length/2.0))
-        shift = np.argmax(ampFixSignal[self.halfPoint - halfPeriod:self.halfPoint + halfPeriod])
+        shift = np.argmax(ampFixSignal[self.halfPoint - 0* halfPeriod:self.halfPoint +2* halfPeriod])
         angle = 2*np.pi* shift*(1/length)
-        #self.channel = (difference * np.cos(angle)) + (1j * difference * np.sin(angle))
         return magnitude, angle
         
     def SignalDetector(self, signal):
@@ -147,13 +111,9 @@ class Demultiplexer():
             badMag, goodAngle = self.ChannelEstimator(self.cleanPilot ,pilot2) 
             channel = (magnitude * np.cos(goodAngle)) + (1j * magnitude* np.sin(goodAngle))
             
-            
-            
-            
             correct = [False] * 4
             channels = [0] * 4
             channels[0] = (magnitude * np.cos(goodAngle)) + (1j * magnitude* np.sin(goodAngle))
-            print channels[0]
             self.fakeTransmission.OverideWave(self.cosWave)
             self.fakeTransmission.MultiplySymbol(channels[0])
             correct[0] = self.QuadrantSelect(pilot2[4750:5250],self.fakeTransmission.wave[4750:5250])
@@ -181,14 +141,9 @@ class Demultiplexer():
             
             self.fakeTransmission.OverideWave(self.cosWave)
             self.fakeTransmission.MultiplySymbol(channel)
-            print "here1: ", channel
-            plot.figure()
-            plot.plot(self.fakeTransmission.wave, color='black')
-            plot.plot(pilot2, color='red')
             maxP = np.argmax(pilot1[:1000])
             maxT = np.argmax(self.fakeTransmission.wave[:1000])
-            print abs(maxP-maxT)
-            if(abs(maxP-maxT)<= 400):
+            if(abs(maxP-maxT) < 250 or abs(maxP-maxT) > 500):
                 channel = complex(-1*channel.real,-1*channel.imag)
                 self.fakeTransmission.OverideWave(self.cosWave)
                 self.fakeTransmission.MultiplySymbol(channel)
@@ -196,9 +151,12 @@ class Demultiplexer():
             dataSignal = self.BandPassFilter(self.fmux + 4*self.fc,self.fmux + 12 * self.fc,signal)
             data = self.DemodulateDSB_SC(dataSignal, 3 * self.fc,8*self.fc,goodAngle)
             return data, channel
-        else:
-            a = self.BandPassFilter(self.fmux - self.fc,self.fmux + self.fc,signal,1)
-            self.DemodulateDSB_FC(a)
+        if(self.type == MultiplexerType.TDM):
+            pilotSignal = signal[len(self.time):int(2*len(self.time))]
+            dataSignal = signal[0:len(self.time)]
+            magnitude, angle = self.ChannelEstimator(self.cleanPilot ,pilotSignal)
+            channel = (magnitude * np.cos(angle)) + (1j * magnitude* np.sin(angle))
+            return dataSignal, channel        
             
     def FFT(self, signal):
         n = len(signal) # length of the signal
@@ -228,24 +186,6 @@ class Demultiplexer():
     def EstimatePilotMaxWithFFT(self, modulatedPilot, pilotMagnitude = 1):       
         fftPilot = np.fft.fft(modulatedPilot)/len(modulatedPilot) # fft computing and normalization
         return (max(abs(fftPilot))*4)/pilotMagnitude
-    
-#    def QuadrantSelect(self, pilot, tansmission):
-#        argP = np.argmax(pilot)
-#        tmpP = pilot
-#        tmpP[tmpP < 0]
-#        negValuesP = -1*tmpP
-#        argP = np.argmax(negValuesP)
-#        
-#        tmpT = tansmission
-#        tmpT[tmpT < 0]
-#        negValuesT = -1*tmpT
-#        argT = np.argmax(negValuesT)
-#        print "argP: ", argP, "argT", argT
-#        difference = abs(argP-argT)
-#        if(difference < 50):
-#            return True
-#        else:
-#            return False
         
     def QuadrantSelect(self, pilot, tansmission):
         maxP = np.amax(pilot)
@@ -259,45 +199,3 @@ class Demultiplexer():
             return True
         else:
             return False
-
-
-    
-         
-#Test Code
-binInput = '10'
-rec = Receiver()
-al = AlamoutiScheme()
-transmissions = al.CreateTransmissions(binInput,ModulationType.BPSK)
-#n = 1
-##plot.figure(12)
-##plot.clf()
-##mux0 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][0])
-##mux1 = Multiplexer.Multiplexer(MultiplexerType.FDM,transmissions[0][1])
-##plot.plot(transmissions[0][0].wave, color='purple')
-##plot.plot(transmissions[0][1].wave, color="green")
-##plot.figure(13)
-##plot.clf()
-##plot.plot(mux0.wave, color='purple')
-##plot.plot(mux1.wave, color="green")
-#
-trans = transmissions[0][0]
-#    plot.figure(n)
-#    plot.clf()
-ch0 = FadingChannel(0)
-ch0.h = -0.4-06j
-h0c = ch0.h
-Mux10 = Multiplexer.Multiplexer(MultiplexerType.FDM,trans)
-plot.figure()
-trans.OverideWave(Mux10.wave)
-ch0.ApplyFadingToTransmission(trans)
-Demux1 = Demultiplexer(MultiplexerType.FDM,trans.wave, trans.wave)
-trans.OverideWave(Demux1.s0)
-h0d = Demux1.h0
-r0 = rec.CombineReceivedTransmissions(trans,trans)
-print "H0 real", h0c
-print "H0 est", h0d, "abs est h: ", abs(h0d)
-
-#plot.plot(faded.wave, color='green')
-#plot.plot(Demux1.s0)
-#faded.MultiplySymbol(h0c)
-#plot.plot(faded.wave, color='black')

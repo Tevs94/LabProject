@@ -26,10 +26,8 @@ class GUI(tk.Tk):
                 "QAM64": ModulationType.QAM64,
                 "Assume Ideal": None,
                 "Pilot with FDM": MultiplexerType.FDM,
-                "Pilot with OFDM": MultiplexerType.OFDM,
-                "Maximum Likelyhood": DecoderType.ML,
-                "Sphere": DecoderType.Sphere
-                
+                "Pilot with TDM": MultiplexerType.TDM,
+                "Maximum Likelyhood": DecoderType.ML    
         }
         
         container = tk.Frame(self)
@@ -54,7 +52,7 @@ class GUI(tk.Tk):
         
         chanEstLabel = tk.Label(optionsFrame, text = "Channel Estimation Method:")
         chanEstLabel.grid(row = 1, column = 0, padx = 5)
-        channelEstTypes = ["Assume Ideal", "Pilot with FDM", "Pilot with OFDM"]
+        channelEstTypes = ["Assume Ideal", "Pilot with FDM", "Pilot with TDM"]
         self.channelEstimationMethod = tk.StringVar(self)
         self.channelEstimationMethod.set(channelEstTypes[0])
         channelEstimateBox = tk.OptionMenu(optionsFrame,self.channelEstimationMethod, *channelEstTypes)
@@ -70,7 +68,7 @@ class GUI(tk.Tk):
         
         decodeLabel = tk.Label(optionsFrame, text = "Decoding Scheme:")
         decodeLabel.grid(row = 3, column = 0, padx = 5)
-        decodeTypes = ["Maximum Likelyhood", "Sphere"]
+        decodeTypes = ["Maximum Likelyhood"]
         self.decodeMethod = tk.StringVar(self)
         self.decodeMethod.set(decodeTypes[0])
         decodeBox = tk.OptionMenu(optionsFrame,self.decodeMethod, *decodeTypes)
@@ -169,6 +167,7 @@ class GUI(tk.Tk):
     def CloseApp(self):
         self.destroy()
 
+    #This functon controls image selection and is called when the upload image slot on the gui is clicked
     def OnClick(self, event=None):
         tk.filename = ""
         tk.filename = tkFileDialog.askopenfilename(initialdir = getcwd() + '\Upload Image Folder',title = "Select file",filetypes = [("png files","*.png")])
@@ -178,6 +177,7 @@ class GUI(tk.Tk):
             self.picLabel.configure(image=img)
             self.picLabel.image = img
         
+    #This function reads in an image then scales it to the desired size for displaying on the GUI
     def OpenImage(self, path):
         self.original = Image.open(path, 'r')
         width = 300
@@ -186,6 +186,7 @@ class GUI(tk.Tk):
         resizedImage = self.original.resize((width, heightRatio),Image.ANTIALIAS)
         return resizedImage
 
+    #This function is used update the output image of the GUI, if python cannot read the transmited file, it displayed a corrupted notification image
     def OutputImage(self, sim, show = False):
         try:
             img = ImageTk.PhotoImage(self.OpenImage(getcwd() + '\Images' + '\\' + sim.rwControl.imageName))
@@ -200,6 +201,7 @@ class GUI(tk.Tk):
             self.picLabel2.image = photo2
         sim.rwControl.ClearGlobals()
 
+    #Updates Tkniter gui ever 0.5s to prevent the application crashing before simulation ends.
     def Refresh(self):
         self.update()
         self.after(500,self.Refresh)      
@@ -233,6 +235,7 @@ class GUI(tk.Tk):
         dataPlot.show()
         dataPlot.get_tk_widget().pack()        
 
+#This is a threading class used to allow the loading bar to update without affecting the simulation thread
 class MeterThread(threading.Thread):
     def __init__(self, GUI, simThread):
         threading.Thread.__init__(self)
@@ -253,7 +256,7 @@ class MeterThread(threading.Thread):
     def ForceClose(self):
         self.close = True
         
-        
+#Tkinter locks up if multithread isnt used along with a refresh function after, this class puts simulation on a seperate thread.
 class SimulationThread(threading.Thread):
     def __init__(self, GUI,binInput,modType,noiseStandardDeviation,pilotType,decoderType,numReceivers, simObject):
         threading.Thread.__init__(self)
