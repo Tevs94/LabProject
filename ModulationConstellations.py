@@ -118,13 +118,15 @@ class ModulationConstellations():
             return self.QAM64Dictionary
     
     def NormalizeConstellations(self):
-        for constellation in [self.BPSKDictionary , self.QPSKDictionary, self.QAM16Dictionary, self.QAM64Dictionary]:
-            vals = constellation.values()
-            totalPower = 0
-            for point in vals:
-                totalPower += np.sqrt(np.square(point[0])+np.square(point[1]))
-            avgPower = totalPower/len(vals)
+        constants = {
+                ModulationType.QPSK:np.sqrt(2),
+                ModulationType.QAM16:np.sqrt(10),
+                ModulationType.QAM64:np.sqrt(42)
+                }
+        for scheme in [ModulationType.QPSK, ModulationType.QAM16, ModulationType.QAM64]:
+            factor = constants[scheme]
+            constellation = self.GetConstellationDictionary(scheme)
             for kvp in constellation:
-                constellation[kvp][0] = constellation[kvp][0]/avgPower
-                constellation[kvp][1] = constellation[kvp][1]/avgPower             
-      
+                constellation[kvp][0] = constellation[kvp][0]/factor
+                constellation[kvp][1] = constellation[kvp][1]/factor      
+         
