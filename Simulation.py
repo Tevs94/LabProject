@@ -12,7 +12,7 @@ from copy import deepcopy
 
 class Simulation():
     def __init__(self):
-        self.rwControl = FileManager.FileManager()
+        #self.rwControl = FileManager.FileManager()
         self.progressInt = 0
     
     def Run2by1(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
@@ -79,8 +79,7 @@ class Simulation():
                     #Channel Estimation
                     h0 = Demux1.h0
                     h1 = Demux1.h1
-                    print "Estimated: ", h0, "Real: ",ch0.h
-                    
+                                     
                 #Combining
     
                 output = rec.AlamoutiCombine2by1(h0,h1,r0,r1)
@@ -103,7 +102,7 @@ class Simulation():
             if binInput[n] != binOutput[n]:
                 numErrors += 1
                 
-        self.BinaryToImage(binOutput)     
+        #self.BinaryToImage(binOutput)     
         
         BER = float(numErrors) /  float(len(binInput))     
         res = SimulationResults(binOutput, BER, len(binInput), numErrors, numTransmissions, hData, transmissionEx)

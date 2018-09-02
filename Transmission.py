@@ -25,9 +25,7 @@ class Transmission():
     def MultiplySymbol(self, h):
         #Will be used to multiply symbol by h and adjust the waveform
         angleH = np.angle(h)
-        print "real ANGLE:", angleH
         magH = abs(h)
-        print "Real mag", magH
         self.symbol = (self.symbol*h)
         self.PhaseShiftWave(angleH)
         self.AmplitudeMultiplyWave(magH)
@@ -48,7 +46,6 @@ class Transmission():
         carrierTime = float(1)/(self.fc)
         carrierLength = (carrierTime)/GlobalSettings.sampleTime
         numShifts = int(round(carrierLength*(angle/(np.pi*2))))
-        print "Real shifts", numShifts
         self.wave = np.roll(self.wave,numShifts)
     
     def AmplitudeMultiplyWave(self, amplitude):

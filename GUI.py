@@ -153,7 +153,7 @@ class GUI(tk.Tk):
             pilotType = self.enumDictionary.get(self.channelEstimationMethod.get())
             decoderType = self.enumDictionary.get(self.decodeMethod.get())
             SNR = self.SNR.get()
-            noiseStandardDeviation = np.sqrt(np.power(10.0, (-1*SNR)))
+            noiseStandardDeviation = np.sqrt(np.power(10.0, (-1*SNR/10.0)))
             numReceivers = self.RecNum.get()
         except:
             print "Alert: Input Error"

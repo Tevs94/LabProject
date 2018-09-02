@@ -5,7 +5,7 @@ import matplotlib.pyplot as plot
 class FadingChannel():
     def __init__(self, noiseDeviation = np.sqrt(0.5)):
         random.seed()
-        self.h = random.gauss(0, np.sqrt(0.5)) + 1j*random.gauss(0,np.sqrt(0.5))
+        self.h = random.gauss(0, 1/np.sqrt(2)) + 1j*random.gauss(0,1/np.sqrt(2))
         self.noise = random.gauss(0, noiseDeviation) + 1j*random.gauss(0, noiseDeviation)
        
     def ApplyFadingToTransmission(self, transmission):
