@@ -9,10 +9,11 @@ import Demultiplexer as Demultiplexer
 import FileManager as FileManager
 from os import getcwd
 from copy import deepcopy
+import matplotlib.pyplot as plot
 
 class Simulation():
     def __init__(self):
-        #self.rwControl = FileManager.FileManager()
+        self.rwControl = FileManager.FileManager()
         self.progressInt = 0
     
     def Run2by1(self, binInput, modulationScheme, noiseDeviation = 0.05, transmitPower = 1, estimationMethod = None, decoderType = DecoderType.ML):
@@ -58,7 +59,8 @@ class Simulation():
                     Mux11 = Multiplexer.Multiplexer(estimationMethod,transmissions[1][2*n])
                     transmissions[0][2*n].OverideWave(Mux10.wave)
                     transmissions[1][2*n].OverideWave(Mux11.wave)
-                    transmissionEx = deepcopy(transmissions[0][0]).wave   
+                    if n == 0:
+                        transmissionEx = deepcopy(transmissions[0][0]).wave   
                     ch0.ApplyFadingToTransmission(transmissions[0][2*n])
                     ch1.ApplyFadingToTransmission(transmissions[1][2*n])
                     Demux1 = Demultiplexer.Demultiplexer(estimationMethod,transmissions[0][2*n].wave, transmissions[1][2*n].wave)
@@ -102,7 +104,7 @@ class Simulation():
             if binInput[n] != binOutput[n]:
                 numErrors += 1
                 
-        #self.BinaryToImage(binOutput)     
+        self.BinaryToImage(binOutput)     
         
         BER = float(numErrors) /  float(len(binInput))     
         res = SimulationResults(binOutput, BER, len(binInput), numErrors, numTransmissions, hData, transmissionEx)
@@ -118,6 +120,7 @@ class Simulation():
         hData = []
         inputStrings = self.SplitInput(binInput)
         progress = 0.0
+        self.progressInt = 0
         
         for binString in inputStrings:
             
@@ -169,7 +172,8 @@ class Simulation():
                     transmissions[1][2*n].OverideWave(Mux11.wave)
                     transmissions2[0][2*n].OverideWave(Mux12.wave)
                     transmissions2[1][2*n].OverideWave(Mux13.wave)
-                    transmissionEx = deepcopy(transmissions[0][0]).wave  
+                    if n == 0:
+                        transmissionEx = deepcopy(transmissions[0][0]).wave  
                     ch0.ApplyFadingToTransmission(transmissions[0][2*n])
                     ch1.ApplyFadingToTransmission(transmissions[1][2*n])
                     ch2.ApplyFadingToTransmission(transmissions2[0][2*n])
@@ -221,7 +225,7 @@ class Simulation():
 
                 numTransmissions +=4
                 progress = float(len(binOutput))/float(len(binInput))
-                #.progressInt = int(progress)
+                self.progressInt = int(progress*1000)
 
 
         numErrors = 0

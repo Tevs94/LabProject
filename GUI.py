@@ -60,7 +60,7 @@ class GUI(tk.Tk):
         
         SNRLabel = tk.Label(optionsFrame, text = "SNR(dB):")
         SNRLabel.grid(row = 2, column = 0, padx = 5)
-        SNRValues = [30.0, 20.0, 10.0, 5.0, 4.0, 3.0,2.0 ,1.0]
+        SNRValues = [50.0, 45.0, 40.0, 35.0, 30.0, 25.0, 20.0, 15.0, 10.0, 5.0 ,1.0]
         self.SNR = tk.DoubleVar(self)
         self.SNR.set(SNRValues[0])
         SNRBox = tk.OptionMenu(optionsFrame,self.SNR, *SNRValues)
